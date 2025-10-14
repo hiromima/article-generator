@@ -146,44 +146,16 @@ jobs:
             # TODO: Trigger DeploymentAgent if applicable
           fi
 
-      - name: Route to Agent - Workflow Failed
-        if: |
-          github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion == 'failure'
-        run: |
-          echo "🚨 WORKFLOW FAILURE DETECTED"
-          echo "Workflow: ${{ github.event.workflow_run.name }}"
-          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "Run ID: ${{ github.event.workflow_run.id }}"
-
-          # Escalate to Guardian for critical failures
-          if echo "${{ github.event.workflow_run.name }}" | grep -qE "(agent-runner|economic-circuit-breaker)"; then
-            echo "🚨 Critical workflow failed, escalating to Guardian"
-
-            gh issue create \
-              --title "🚨 Critical Workflow Failure: ${{ github.event.workflow_run.name }}" \
-              --label "🔥Sev.1-Critical,🤖AI-システム" \
-              --assignee "${{ github.repository_owner }}" \
-              --body "## 🚨 Critical Workflow Failure
-
-            **Workflow**: ${{ github.event.workflow_run.name }}
-            **Conclusion**: ${{ github.event.workflow_run.conclusion }}
-            **Run ID**: ${{ github.event.workflow_run.id }}
-            **Run URL**: ${{ github.event.workflow_run.html_url }}
-
-            This workflow is critical to Agentic OS operations. Immediate Guardian attention required.
-
-            ### Next Steps
-            1. Review workflow logs
-            2. Identify root cause
-            3. Fix or rollback changes
-            4. Re-run workflow
-
-            ---
-            **Escalated by**: Webhook Handler
-            **Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-              || echo "⚠️ Failed to create escalation Issue"
-          fi
+      # Disabled to prevent infinite loop - webhook-handler triggers itself
+      # - name: Route to Agent - Workflow Failed
+      #   if: |
+      #     github.event_name == 'workflow_run' &&
+      #     github.event.workflow_run.conclusion == 'failure'
+      #   run: |
+      #     echo "🚨 WORKFLOW FAILURE DETECTED"
+      #     echo "Workflow: ${{ github.event.workflow_run.name }}"
+      #     echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+      #     echo "Run ID: ${{ github.event.workflow_run.id }}"
 
       - name: Event Summary
         if: always()
