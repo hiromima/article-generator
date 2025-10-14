@@ -1,9 +1,17 @@
 name: Webhook Event Router
 
-# NOTE: This workflow is disabled to reduce GitHub Actions usage
-# The webhook-handler.yml provides the same functionality
 on:
-  workflow_dispatch:
+  issues:
+    types: [opened, labeled, closed, reopened, assigned]
+  pull_request:
+    types: [opened, closed, reopened, review_requested, ready_for_review]
+  push:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write

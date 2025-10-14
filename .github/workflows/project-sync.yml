@@ -9,8 +9,6 @@ on:
 jobs:
   sync-to-project:
     runs-on: ubuntu-latest
-    # Skip this workflow - project URL needs configuration
-    if: false
     permissions:
       issues: read
       pull-requests: read
@@ -18,9 +16,7 @@ jobs:
     steps:
       - name: Sync to GitHub Projects
         uses: actions/add-to-project@v0.5.0
+        continue-on-error: true
         with:
-          # Note: Update this URL based on your GitHub Projects setup
-          # For personal repos: https://github.com/users/{owner}/projects/{number}
-          # For org repos: https://github.com/orgs/{owner}/projects/{number}
           project-url: https://github.com/users/${{ github.repository_owner }}/projects/1
           github-token: ${{ secrets.GITHUB_TOKEN }}

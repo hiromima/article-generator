@@ -12,9 +12,8 @@ on:
     types: [created]
   pull_request_review:
     types: [submitted]
-  # Push events disabled to reduce GitHub Actions usage on free plan
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   issues: write
