@@ -25,6 +25,7 @@ jobs:
   route-event:
     runs-on: ubuntu-latest
     name: Route Event to Appropriate Handler
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
