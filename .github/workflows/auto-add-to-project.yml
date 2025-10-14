@@ -9,6 +9,8 @@ jobs:
   add-to-project:
     runs-on: ubuntu-latest
     name: Add issue to project
+    # Only run if GH_PROJECT_TOKEN is configured
+    if: ${{ secrets.GH_PROJECT_TOKEN != '' }}
     steps:
       - name: Add Issue to Project
         uses: actions/add-to-project@v0.5.0

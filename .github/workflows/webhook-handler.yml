@@ -14,9 +14,6 @@ on:
     types: [submitted]
   push:
     branches: [main]
-  workflow_run:
-    workflows: ["*"]
-    types: [completed]
 
 permissions:
   issues: write

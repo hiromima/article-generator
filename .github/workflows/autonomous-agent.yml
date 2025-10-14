@@ -231,7 +231,7 @@ jobs:
             github.rest.issues.createComment({
               issue_number: ${{ needs.check-trigger.outputs.issue_number }},
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.name,
               body: `## ✅ Autonomous Agent Execution Complete
 
             **Status**: Success
@@ -268,7 +268,7 @@ jobs:
             github.rest.issues.createComment({
               issue_number: ${{ needs.check-trigger.outputs.issue_number }},
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.name,
               body: `## ❌ Autonomous Agent Execution Failed
 
             **Status**: Failed
@@ -298,6 +298,6 @@ jobs:
             github.rest.issues.addLabels({
               issue_number: ${{ needs.check-trigger.outputs.issue_number }},
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.name,
               labels: ['🚨escalated', '❌agent-failed']
             })
