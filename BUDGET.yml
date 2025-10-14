@@ -8,8 +8,15 @@ monthly_budget_usd: 100
 budget_allocation:
   anthropic_api: 70      # Anthropic API (Claude) - 70 USD
   firebase: 20           # Firebase Hosting/Functions - 20 USD
-  github_actions: 0      # GitHub Actions - 無料枠内 (3000分/月)
+  github_actions: 0      # GitHub Actions - 無料枠 2000分/月 (private repo)
   buffer: 10             # バッファ - 10 USD
+
+# GitHub Actions 使用制限（無料枠）
+github_actions_limits:
+  monthly_minutes: 2000  # プライベートリポジトリの月間無料枠
+  current_usage: 2000    # 現在の使用量 (2025-10-14時点)
+  reset_date: "2025-11-01"  # 次回リセット日
+  status: "EXHAUSTED"    # 状態: EXHAUSTED（使い切り）
 
 # しきい値設定
 thresholds:

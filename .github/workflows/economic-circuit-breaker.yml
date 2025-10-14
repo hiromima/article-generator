@@ -127,10 +127,10 @@ jobs:
           echo "github_minutes=$TOTAL_MINUTES" >> $GITHUB_OUTPUT
           echo "⚙️ GitHub Actions Usage: ${TOTAL_MINUTES} minutes this month"
 
-          # 無料枠3000分を超えたら警告
-          if [ "$TOTAL_MINUTES" -gt 3000 ]; then
+          # 無料枠2000分を超えたら警告（プライベートリポジトリ）
+          if [ "$TOTAL_MINUTES" -gt 2000 ]; then
             echo "github_over_quota=true" >> $GITHUB_OUTPUT
-            echo "⚠️ WARNING: GitHub Actions over free tier quota!"
+            echo "⚠️ WARNING: GitHub Actions over free tier quota (2000 min/month for private repos)!"
           else
             echo "github_over_quota=false" >> $GITHUB_OUTPUT
           fi
