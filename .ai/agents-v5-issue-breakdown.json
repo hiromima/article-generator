@@ -1,0 +1,310 @@
+{
+  "meta": {
+    "source": "AGENTS.md v5.0 - The Final Mandate",
+    "created": "2025-10-15",
+    "repository": "hiromima/article-generator",
+    "totalEpics": 6,
+    "totalSubIssues": 24
+  },
+  "labelDefinitions": {
+    "epic": "Epic tracking issue",
+    "P0-Critical": "最優先 - ブロッキング",
+    "P1-High": "高優先度",
+    "P2-Medium": "中優先度",
+    "P3-Low": "低優先度",
+    "autonomous-governance": "自律統治システム",
+    "economic-governance": "経済的ガバナンス",
+    "knowledge-persistence": "ナレッジ永続化",
+    "self-healing": "自己修復システム",
+    "security": "セキュリティ",
+    "meta-operations": "メタオペレーション",
+    "agent:coordinator": "CoordinatorAgent",
+    "agent:cost-monitoring": "CostMonitoringAgent",
+    "agent:knowledge": "KnowledgeAgent",
+    "agent:incident-commander": "IncidentCommanderAgent",
+    "agent:system-registry": "SystemRegistryAgent",
+    "agent:audit": "AuditAgent",
+    "infrastructure": "インフラ設定",
+    "workflow": "GitHub Actions ワークフロー",
+    "database": "データベース",
+    "terraform": "Terraform/IaC"
+  },
+  "epics": [
+    {
+      "epicNumber": "AGv5-1",
+      "title": "[Epic] Economic Governance Protocol - 経済的ガバナンス実装",
+      "description": "AI Agent のバグや非効率な処理による無限コスト増大を防ぐため、予算管理とサーキットブレーカーを実装します。\n\n## 目的\n- 月間クラウド予算の定義と監視\n- コスト消費ペースの定常監視（1時間ごと）\n- 予算超過時の自動停止（経済的サーキットブレーカー）\n\n## 成果物\n- `BUDGET.yml`: 予算定義ファイル\n- `.github/workflows/economic-circuit-breaker.yml`: コスト監視ワークフロー\n- `CostMonitoringAgent`: コスト監視エージェント\n\n## 参照\nAGENTS.md v5.0 - Part 1, Economic_Governance_Protocol",
+      "labels": ["epic", "P0-Critical", "economic-governance", "autonomous-governance"],
+      "assignedAgent": "CostMonitoringAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-1.1",
+          "title": "[サブ] BUDGET.yml 作成 - 月間予算定義",
+          "description": "## タスク\n月間クラウド予算を定義する `BUDGET.yml` ファイルを作成します。\n\n```yaml\nmonthly_budget_usd: 500\nthresholds:\n  warning: 0.8  # 80%で警告\n  emergency: 1.5  # 150%で緊急停止\nservices:\n  - name: anthropic_api\n    budget_usd: 400\n  - name: firebase\n    budget_usd: 100\nemergency_actions:\n  - disable_workflows:\n      - agent-runner.yml\n      - continuous-improvement.yml\n  - notify:\n      - type: github_issue\n        labels: [\"P0-Critical\", \"economic-emergency\"]\n```\n\n## 成功基準\n- ✅ `BUDGET.yml` がリポジトリルートに存在\n- ✅ 全サービスの予算が定義済み\n- ✅ しきい値が設定済み",
+          "labels": ["P0-Critical", "economic-governance", "infrastructure"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": [],
+          "estimatedHours": 1
+        },
+        {
+          "number": "AGv5-1.2",
+          "title": "[サブ] CostMonitoringAgent 実装",
+          "description": "## タスク\n1時間ごとに Billing API を叩き、コスト消費ペースを監視するエージェントを実装します。\n\n## 実装詳細\n```javascript\n// src/agents/cost-monitoring/CostMonitoringAgent.js\nexport class CostMonitoringAgent extends BaseAgent {\n  async execute() {\n    // 1. BUDGET.yml を読み込み\n    // 2. Anthropic Billing API をチェック\n    // 3. Firebase Billing API をチェック\n    // 4. 消費率を計算\n    // 5. しきい値を超えた場合、経済的非常事態を宣言\n  }\n}\n```\n\n## API エンドポイント\n- Anthropic: (Billing API が利用可能になったら統合)\n- Firebase: Cloud Billing API\n\n## 成功基準\n- ✅ エージェントが BUDGET.yml を読み込める\n- ✅ 各サービスのコストを取得できる\n- ✅ 消費率を正しく計算できる",
+          "labels": ["P0-Critical", "economic-governance", "agent:cost-monitoring"],
+          "assignedAgent": "CostMonitoringAgent",
+          "dependencies": ["AGv5-1.1"],
+          "estimatedHours": 4
+        },
+        {
+          "number": "AGv5-1.3",
+          "title": "[サブ] Economic Circuit Breaker ワークフロー作成",
+          "description": "## タスク\n1時間ごとにコストをチェックし、予算超過時に全開発ワークフローを停止する GitHub Actions ワークフローを作成します。\n\n## 実装\n`.github/workflows/economic-circuit-breaker.yml`\n\n```yaml\nname: Economic Circuit Breaker\n\non:\n  schedule:\n    - cron: '0 * * * *'  # 1時間ごと\n  workflow_dispatch:\n\njobs:\n  monitor-costs:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Check Billing\n        id: check-billing\n        run: |\n          # CostMonitoringAgent を実行\n          node src/agents/cost-monitoring/CostMonitoringAgent.js\n      \n      - name: Declare Emergency if over budget\n        if: steps.check-billing.outputs.is_over_budget == 'true'\n        run: |\n          # 全開発ワークフローを停止\n          gh api -X POST /repos/${{ github.repository }}/actions/workflows/agent-runner.yml/disable\n          \n          # 緊急 Issue 作成\n          gh issue create \\\n            --title \"🤖🚨 Economic Circuit Breaker Triggered\" \\\n            --label \"P0-Critical,economic-emergency\" \\\n            --body \"Cost exceeded 150% of budget. All workflows disabled.\"\n```\n\n## 成功基準\n- ✅ 1時間ごとに自動実行される\n- ✅ 予算超過時にワークフローが停止される\n- ✅ 緊急 Issue が自動作成される",
+          "labels": ["P0-Critical", "economic-governance", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-1.2"],
+          "estimatedHours": 3
+        },
+        {
+          "number": "AGv5-1.4",
+          "title": "[サブ] コスト監視テストとドキュメント作成",
+          "description": "## タスク\nコスト監視システムの動作テストとドキュメントを作成します。\n\n## テスト項目\n- ✅ BUDGET.yml の読み込み\n- ✅ コスト取得の成功\n- ✅ しきい値判定の正確性\n- ✅ 緊急停止の動作確認\n\n## ドキュメント\n`docs/ECONOMIC_GOVERNANCE.md`\n- コスト監視の仕組み\n- 緊急停止の復旧方法\n- 予算の変更手順\n\n## 成功基準\n- ✅ 全テストが合格\n- ✅ ドキュメントが完備",
+          "labels": ["P1-High", "economic-governance", "documentation"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-1.3"],
+          "estimatedHours": 2
+        }
+      ]
+    },
+    {
+      "epicNumber": "AGv5-2",
+      "title": "[Epic] Knowledge Persistence Layer - ナレッジ永続化システム",
+      "description": "過去の失敗や成功から学習し、判断の精度を向上させるナレッジ永続化システムを構築します。\n\n## 目的\n- インシデント、ポストモーテム、RFC の永続的保存\n- Vector Database による類似事例検索\n- Agent の学習精度向上\n\n## 成果物\n- `article-generator-knowledge` リポジトリ\n- Vector Database 統合\n- Agent の類似事例検索機能\n\n## 参照\nAGENTS.md v5.0 - Part 2, Knowledge_Persistence_Layer",
+      "labels": ["epic", "P1-High", "knowledge-persistence", "autonomous-governance"],
+      "assignedAgent": "KnowledgeAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-2.1",
+          "title": "[サブ] ナレッジリポジトリ作成",
+          "description": "## タスク\n全てのインシデントレポート、ポストモーテム、RFC を保存する専用リポジトリを作成します。\n\n## リポジトリ構造\n```\narticle-generator-knowledge/\n├── incidents/\n│   ├── 2025-10-01-api-timeout.md\n│   └── 2025-10-05-cost-spike.md\n├── postmortems/\n│   └── 2025-10-06-deployment-failure.md\n├── rfcs/\n│   ├── 001-modular-architecture.md\n│   └── 002-parallel-execution.md\n└── README.md\n```\n\n## 成功基準\n- ✅ GitHub リポジトリ作成完了\n- ✅ ディレクトリ構造設定済み\n- ✅ README.md 作成済み",
+          "labels": ["P1-High", "knowledge-persistence", "infrastructure"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": [],
+          "estimatedHours": 1
+        },
+        {
+          "number": "AGv5-2.2",
+          "title": "[サブ] Vector Database セットアップ",
+          "description": "## タスク\nMarkdown ファイルを Embedding 化し、類似検索を可能にする Vector Database をセットアップします。\n\n## 技術選定\n- **Option 1**: Pinecone (マネージド)\n- **Option 2**: Weaviate (セルフホスト)\n- **Option 3**: Firebase Extensions Vector Search\n\n## 実装\n```javascript\n// src/knowledge/VectorStore.js\nexport class VectorStore {\n  async addDocument(content, metadata) {\n    const embedding = await this.createEmbedding(content);\n    await this.vectorDB.upsert({\n      id: metadata.id,\n      values: embedding,\n      metadata\n    });\n  }\n  \n  async search(query, topK = 5) {\n    const queryEmbedding = await this.createEmbedding(query);\n    return await this.vectorDB.query({\n      vector: queryEmbedding,\n      topK\n    });\n  }\n}\n```\n\n## 成功基準\n- ✅ Vector DB がセットアップ済み\n- ✅ Embedding 作成が動作する\n- ✅ 類似検索が動作する",
+          "labels": ["P1-High", "knowledge-persistence", "database"],
+          "assignedAgent": "KnowledgeAgent",
+          "dependencies": ["AGv5-2.1"],
+          "estimatedHours": 4
+        },
+        {
+          "number": "AGv5-2.3",
+          "title": "[サブ] 自動 Embedding ワークフロー作成",
+          "description": "## タスク\nナレッジリポジトリへの push をトリガーに、Markdown を自動で Embedding 化するワークフローを作成します。\n\n## 実装\n`.github/workflows/knowledge-embedding.yml`\n\n```yaml\nname: Knowledge Embedding\n\non:\n  push:\n    branches: [main]\n    paths:\n      - 'incidents/**'\n      - 'postmortems/**'\n      - 'rfcs/**'\n\njobs:\n  embed:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      \n      - name: Extract changed files\n        id: changes\n        run: |\n          git diff --name-only HEAD~1 HEAD\n      \n      - name: Create embeddings\n        run: |\n          node scripts/create-embeddings.js\n```\n\n## 成功基準\n- ✅ push 時に自動実行される\n- ✅ 変更されたファイルのみ処理される\n- ✅ Vector DB に自動保存される",
+          "labels": ["P1-High", "knowledge-persistence", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-2.2"],
+          "estimatedHours": 3
+        },
+        {
+          "number": "AGv5-2.4",
+          "title": "[サブ] Agent への類似事例検索機能統合",
+          "description": "## タスク\n全 Agent に、処理開始時に類似事例を検索する機能を統合します。\n\n## 実装\n```javascript\n// src/agents/base/BaseAgent.js\nexport class BaseAgent {\n  async execute(input) {\n    // 1. 類似事例を検索\n    const similarCases = await this.searchKnowledge(input);\n    \n    // 2. 類似事例を参考に処理\n    const result = await this.process(input, similarCases);\n    \n    return result;\n  }\n  \n  async searchKnowledge(query) {\n    const vectorStore = new VectorStore();\n    return await vectorStore.search(query, 5);\n  }\n}\n```\n\n## 成功基準\n- ✅ 全 Agent が類似事例検索を実行\n- ✅ 検索結果が処理に活用される\n- ✅ 学習精度が向上している",
+          "labels": ["P1-High", "knowledge-persistence", "agent:coordinator"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-2.3"],
+          "estimatedHours": 4
+        }
+      ]
+    },
+    {
+      "epicNumber": "AGv5-3",
+      "title": "[Epic] Graceful Degradation & Human Escalation - 自律性限界とハンドシェイク",
+      "description": "システムが未知の問題に遭遇し、定義されたルールでは解決できない場合の安全装置を実装します。\n\n## 目的\n- 自律性の限界検知\n- グレースフル・デグラデーション\n- 人間への正式なハンドシェイク\n\n## 成果物\n- `IncidentCommanderAgent` の限界検知機能\n- 機能フラグによる部分停止機能\n- `human-intervention-required` Issue 自動作成\n\n## 参照\nAGENTS.md v5.0 - Part 3, Graceful_Degradation_And_Human_Escalation_Protocol",
+      "labels": ["epic", "P0-Critical", "self-healing", "autonomous-governance"],
+      "assignedAgent": "IncidentCommanderAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-3.1",
+          "title": "[サブ] IncidentCommanderAgent 限界検知機能実装",
+          "description": "## タスク\n根本原因特定失敗 & ロールバック3回連続失敗時に、自律的回復不可能と判断する機能を実装します。\n\n## 実装\n```javascript\nexport class IncidentCommanderAgent extends BaseAgent {\n  async execute(incident) {\n    let rollbackAttempts = 0;\n    \n    // 根本原因特定\n    const rootCause = await this.identifyRootCause(incident);\n    \n    if (!rootCause) {\n      // 原因不明の場合、ロールバック試行\n      while (rollbackAttempts < 3) {\n        const success = await this.rollback();\n        if (success) return;\n        rollbackAttempts++;\n      }\n      \n      // 3回失敗 → 自律性の限界\n      await this.declareAutonomyLimit(incident);\n    }\n  }\n}\n```\n\n## 成功基準\n- ✅ 根本原因特定失敗を検知\n- ✅ ロールバック試行回数をカウント\n- ✅ 限界到達時に次ステップへ移行",
+          "labels": ["P0-Critical", "self-healing", "agent:incident-commander"],
+          "assignedAgent": "IncidentCommanderAgent",
+          "dependencies": [],
+          "estimatedHours": 3
+        },
+        {
+          "number": "AGv5-3.2",
+          "title": "[サブ] グレースフル・デグラデーション機能実装",
+          "description": "## タスク\n限界到達時に、パニックせず影響を最小限に抑えるモードに移行します。\n\n## 実装\n```javascript\nasync gracefulDegradation() {\n  // 1. 新規デプロイを全て停止\n  await this.disableWorkflows([\n    'agent-runner.yml',\n    'continuous-improvement.yml'\n  ]);\n  \n  // 2. 影響領域を機能フラグで OFF\n  await this.disableFeatureFlags([\n    'article-generation',\n    'auto-publish'\n  ]);\n  \n  // 3. ログ収集を強化\n  await this.enableDetailedLogging();\n}\n```\n\n## 成功基準\n- ✅ 新規デプロイが停止される\n- ✅ 影響機能が無効化される\n- ✅ 詳細ログが記録される",
+          "labels": ["P0-Critical", "self-healing", "agent:incident-commander"],
+          "assignedAgent": "IncidentCommanderAgent",
+          "dependencies": ["AGv5-3.1"],
+          "estimatedHours": 4
+        },
+        {
+          "number": "AGv5-3.3",
+          "title": "[サブ] Human Intervention Required Issue 自動作成",
+          "description": "## タスク\n自律性の限界に達した際、Guardian への正式なハンドシェイク Issue を作成します。\n\n## 実装\n```javascript\nasync executeHandshakeProtocol(incident) {\n  const issueBody = `\n## 🤖🆘 HANDSHAKE PROTOCOL: Autonomous Recovery Failed\n\n**インシデント ID**: ${incident.id}\n**発生時刻**: ${incident.timestamp}\n\n### システムが試みたアクション\n\n${incident.attemptedActions.map(a => `- ${a}`).join('\\n')}\n\n### 収集データ\n\n\\`\\`\\`json\n${JSON.stringify(incident.data, null, 2)}\n\\`\\`\\`\n\n### 自律性の限界\n\n我々の自律性は限界に達した。Guardian (@${this.guardian}) の介入を要請する。\n\n**次のアクション**: 手動調査と復旧\n  `;\n  \n  await this.createIssue({\n    title: '🤖🆘 HANDSHAKE PROTOCOL: Autonomous Recovery Failed',\n    body: issueBody,\n    labels: ['human-intervention-required', 'P0-Critical']\n  });\n}\n```\n\n## 成功基準\n- ✅ Issue が自動作成される\n- ✅ 全ての試行アクションが記録される\n- ✅ Guardian がメンションされる",
+          "labels": ["P0-Critical", "self-healing", "agent:incident-commander"],
+          "assignedAgent": "IncidentCommanderAgent",
+          "dependencies": ["AGv5-3.2"],
+          "estimatedHours": 2
+        },
+        {
+          "number": "AGv5-3.4",
+          "title": "[サブ] incident-response.yml ワークフロー更新",
+          "description": "## タスク\n既存の `incident-response.yml` にハンドシェイクプロトコルを統合します。\n\n## 実装\n```yaml\n- name: Execute Handshake Protocol on repeated failures\n  if: failure() && steps.rollback.outputs.attempt >= 3\n  uses: actions/github-script@v6\n  with:\n    script: |\n      const { owner, repo } = context.repo;\n      await github.rest.issues.create({\n        owner,\n        repo,\n        title: '🤖🆘 HANDSHAKE PROTOCOL: Autonomous Recovery Failed',\n        body: 'System details: ... All automated actions have been exhausted. Requesting Guardian intervention.',\n        labels: ['human-intervention-required', 'P0-Critical']\n      });\n```\n\n## 成功基準\n- ✅ 3回失敗時に自動実行\n- ✅ Issue 作成が動作\n- ✅ テストが合格",
+          "labels": ["P0-Critical", "self-healing", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-3.3"],
+          "estimatedHours": 2
+        }
+      ]
+    },
+    {
+      "epicNumber": "AGv5-4",
+      "title": "[Epic] Automation Infrastructure Security - 自動化インフラのセキュリティ",
+      "description": "Secrets の動的管理と監査ログによる、自動化システム自体のセキュリティを強化します。\n\n## 目的\n- HashiCorp Vault によるシークレット一元管理\n- 短期トークンの利用\n- AuditAgent による異常検知\n\n## 成果物\n- Vault セットアップ\n- OIDC 認証統合\n- 監査ログシステム\n\n## 参照\nAGENTS.md v5.0 - Part 4, Automation_Infrastructure_Security_Protocol",
+      "labels": ["epic", "P1-High", "security", "meta-operations"],
+      "assignedAgent": "AuditAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-4.1",
+          "title": "[サブ] HashiCorp Vault セットアップ",
+          "description": "## タスク\n全ての Secrets を一元管理する HashiCorp Vault をセットアップします。\n\n## セットアップ\n- **Option 1**: HCP Vault (マネージド)\n- **Option 2**: Self-hosted Vault\n\n## 設定\n```hcl\n# vault-config.hcl\npath \"secret/data/article-generator/*\" {\n  capabilities = [\"read\"]\n}\n\npath \"secret/data/github/*\" {\n  capabilities = [\"read\", \"list\"]\n}\n```\n\n## 成功基準\n- ✅ Vault が起動している\n- ✅ シークレットが保存できる\n- ✅ API 経由でアクセスできる",
+          "labels": ["P1-High", "security", "infrastructure"],
+          "assignedAgent": "AuditAgent",
+          "dependencies": [],
+          "estimatedHours": 3
+        },
+        {
+          "number": "AGv5-4.2",
+          "title": "[サブ] GitHub OIDC 認証統合",
+          "description": "## タスク\nGitHub Actions が Vault から動的トークンを取得できるよう OIDC 認証を設定します。\n\n## 実装\n```yaml\n# .github/workflows/example.yml\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    permissions:\n      id-token: write\n      contents: read\n    steps:\n      - name: Get Vault Token\n        id: vault\n        uses: hashicorp/vault-action@v2\n        with:\n          url: ${{ secrets.VAULT_ADDR }}\n          method: jwt\n          role: github-actions\n          secrets: |\n            secret/data/github token | GITHUB_TOKEN\n```\n\n## 成功基準\n- ✅ OIDC 認証が成功する\n- ✅ 動的トークンが取得できる\n- ✅ トークンの有効期限が15分",
+          "labels": ["P1-High", "security", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-4.1"],
+          "estimatedHours": 4
+        },
+        {
+          "number": "AGv5-4.3",
+          "title": "[サブ] AuditAgent 実装",
+          "description": "## タスク\nVault アクセスと GitHub API コールを監視し、異常な振る舞いを検知するエージェントを実装します。\n\n## 実装\n```javascript\nexport class AuditAgent extends BaseAgent {\n  async execute() {\n    // 1. Vault 監査ログを取得\n    const vaultLogs = await this.fetchVaultAuditLogs();\n    \n    // 2. GitHub API アクセスログを取得\n    const githubLogs = await this.fetchGitHubAuditLogs();\n    \n    // 3. 異常パターン検知\n    const anomalies = await this.detectAnomalies(vaultLogs, githubLogs);\n    \n    // 4. アラート\n    if (anomalies.length > 0) {\n      await this.createSecurityAlert(anomalies);\n    }\n  }\n}\n```\n\n## 異常パターン\n- 通常時以外でのリポジトリクローン\n- 予期しない Secrets へのアクセス\n- 短時間での大量 API コール\n\n## 成功基準\n- ✅ 監査ログが取得できる\n- ✅ 異常パターンを検知できる\n- ✅ アラートが発行される",
+          "labels": ["P1-High", "security", "agent:audit"],
+          "assignedAgent": "AuditAgent",
+          "dependencies": ["AGv5-4.2"],
+          "estimatedHours": 5
+        },
+        {
+          "number": "AGv5-4.4",
+          "title": "[サブ] セキュリティ監査ワークフロー作成",
+          "description": "## タスク\n定期的にセキュリティ監査を実行するワークフローを作成します。\n\n## 実装\n`.github/workflows/security-audit.yml`\n\n```yaml\nname: Security Audit\n\non:\n  schedule:\n    - cron: '0 */6 * * *'  # 6時間ごと\n  workflow_dispatch:\n\njobs:\n  audit:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Run AuditAgent\n        run: |\n          node src/agents/audit/AuditAgent.js\n      \n      - name: Create Security Alert if needed\n        if: steps.audit.outputs.has_anomalies == 'true'\n        run: |\n          gh issue create \\\n            --title \"🔒 Security Audit Alert\" \\\n            --label \"P0-Critical,security\" \\\n            --body \"Anomalies detected. See logs.\"\n```\n\n## 成功基準\n- ✅ 6時間ごとに自動実行\n- ✅ 異常検知時にアラート\n- ✅ ログが保存される",
+          "labels": ["P1-High", "security", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-4.3"],
+          "estimatedHours": 2
+        }
+      ]
+    },
+    {
+      "epicNumber": "AGv5-5",
+      "title": "[Epic] Autonomous Agent Onboarding - 新規エージェント自動登録",
+      "description": "新しい AI Agent をエコシステムに追加する自律的なプロセスを実装します。\n\n## 目的\n- 新規 Agent の自動検知\n- コンプライアンステスト\n- システムへの自動登録\n\n## 成果物\n- `SystemRegistryAgent`\n- `.github/workflows/agent-onboarding.yml`\n- Agent コンプライアンステスト\n\n## 参照\nAGENTS.md v5.0 - Part 4, Autonomous_Onboarding_Protocol_for_New_Agents",
+      "labels": ["epic", "P2-Medium", "meta-operations", "autonomous-governance"],
+      "assignedAgent": "SystemRegistryAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-5.1",
+          "title": "[サブ] SystemRegistryAgent 実装",
+          "description": "## タスク\n新規 Agent を検知し、コンプライアンステストを実行し、登録するエージェントを実装します。\n\n## 実装\n```javascript\nexport class SystemRegistryAgent extends BaseAgent {\n  async execute(newAgentPath) {\n    // 1. 新規 Agent を読み込み\n    const AgentClass = await import(newAgentPath);\n    \n    // 2. コンプライアンステスト\n    const compliant = await this.testCompliance(AgentClass);\n    \n    if (!compliant) {\n      throw new Error('Agent failed compliance tests');\n    }\n    \n    // 3. システムに登録\n    await this.registerAgent(AgentClass);\n    \n    // 4. CODEOWNERS 更新\n    await this.updateCodeowners(newAgentPath);\n  }\n  \n  async testCompliance(AgentClass) {\n    // - BaseAgent を継承しているか\n    // - execute() メソッドが実装されているか\n    // - シークレットがハードコードされていないか\n    return true;\n  }\n}\n```\n\n## 成功基準\n- ✅ 新規 Agent を検知できる\n- ✅ コンプライアンステストが動作\n- ✅ 登録が完了する",
+          "labels": ["P2-Medium", "meta-operations", "agent:system-registry"],
+          "assignedAgent": "SystemRegistryAgent",
+          "dependencies": [],
+          "estimatedHours": 4
+        },
+        {
+          "number": "AGv5-5.2",
+          "title": "[サブ] Agent コンプライアンステスト作成",
+          "description": "## タスク\n新規 Agent が AGENTS.md v5.0 に準拠しているかをテストするスイートを作成します。\n\n## テスト項目\n```javascript\ndescribe('Agent Compliance', () => {\n  it('should extend BaseAgent', () => {});\n  it('should implement execute() method', () => {});\n  it('should not have hardcoded secrets', () => {});\n  it('should have proper logging', () => {});\n  it('should handle errors gracefully', () => {});\n});\n```\n\n## ツール\n- `trufflehog`: シークレットスキャン\n- `vitest`: ユニットテスト\n\n## 成功基準\n- ✅ 全テストが実装されている\n- ✅ シークレットスキャンが動作\n- ✅ テストが合格する",
+          "labels": ["P2-Medium", "meta-operations", "testing"],
+          "assignedAgent": "SystemRegistryAgent",
+          "dependencies": ["AGv5-5.1"],
+          "estimatedHours": 3
+        },
+        {
+          "number": "AGv5-5.3",
+          "title": "[サブ] agent-onboarding.yml ワークフロー作成",
+          "description": "## タスク\n`src/agents/` への push をトリガーに、新規 Agent を自動登録するワークフローを作成します。\n\n## 実装\n`.github/workflows/agent-onboarding.yml`\n\n```yaml\nname: Agent Onboarding\n\non:\n  push:\n    branches: [main]\n    paths:\n      - 'src/agents/**'\n\njobs:\n  onboard:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      \n      - name: Detect new agents\n        id: detect\n        run: |\n          git diff --name-only HEAD~1 HEAD | grep 'src/agents/'\n      \n      - name: Run compliance tests\n        run: |\n          npm test -- --run agent-compliance\n      \n      - name: Scan for secrets\n        run: |\n          trufflehog filesystem src/agents/\n      \n      - name: Register agent\n        run: |\n          node src/agents/system-registry/SystemRegistryAgent.js\n```\n\n## 成功基準\n- ✅ 新規 Agent push 時に自動実行\n- ✅ コンプライアンステスト実行\n- ✅ 自動登録が完了",
+          "labels": ["P2-Medium", "meta-operations", "workflow"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-5.2"],
+          "estimatedHours": 3
+        }
+      ]
+    },
+    {
+      "epicNumber": "AGv5-6",
+      "title": "[Epic] Disaster Recovery Protocol - システム災害復旧",
+      "description": "`.github` ディレクトリや GitHub App 設定が破壊された場合の復旧プロセスを実装します。\n\n## 目的\n- Infrastructure as Code による設定管理\n- Terraform による自動復旧\n- ワンコマンドブートストラップ\n\n## 成果物\n- `system-as-code` リポジトリ\n- Terraform 設定ファイル\n- ブートストラップスクリプト\n\n## 参照\nAGENTS.md v5.0 - Part 4, Disaster_Recovery_Protocol_for_The_System",
+      "labels": ["epic", "P2-Medium", "infrastructure", "terraform"],
+      "assignedAgent": "CoordinatorAgent",
+      "subIssues": [
+        {
+          "number": "AGv5-6.1",
+          "title": "[サブ] system-as-code リポジトリ作成",
+          "description": "## タスク\n全ての GitHub 設定を Terraform で管理する専用リポジトリを作成します。\n\n## リポジトリ構造\n```\nsystem-as-code/\n├── terraform/\n│   ├── main.tf\n│   ├── workflows.tf\n│   ├── branch-protection.tf\n│   ├── secrets.tf\n│   └── variables.tf\n├── scripts/\n│   └── bootstrap.sh\n└── README.md\n```\n\n## 成功基準\n- ✅ GitHub リポジトリ作成完了\n- ✅ ディレクトリ構造設定済み\n- ✅ README.md 作成済み",
+          "labels": ["P2-Medium", "infrastructure", "terraform"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": [],
+          "estimatedHours": 1
+        },
+        {
+          "number": "AGv5-6.2",
+          "title": "[サブ] Terraform 設定ファイル作成",
+          "description": "## タスク\nGitHub リポジトリの全設定を Terraform で定義します。\n\n## 実装\n```hcl\n# terraform/main.tf\nterraform {\n  required_providers {\n    github = {\n      source  = \"integrations/github\"\n      version = \"~> 5.0\"\n    }\n  }\n}\n\nprovider \"github\" {\n  token = var.github_token\n}\n\n# workflows.tf\nresource \"github_repository_file\" \"economic_circuit_breaker\" {\n  repository = var.repository_name\n  branch     = \"main\"\n  file       = \".github/workflows/economic-circuit-breaker.yml\"\n  content    = file(\"${path.module}/workflows/economic-circuit-breaker.yml\")\n}\n\n# branch-protection.tf\nresource \"github_branch_protection\" \"main\" {\n  repository_id = github_repository.main.node_id\n  pattern       = \"main\"\n  \n  required_status_checks {\n    strict = true\n    contexts = [\"test\", \"lint\"]\n  }\n}\n```\n\n## 成功基準\n- ✅ 全ワークフローが定義済み\n- ✅ ブランチ保護が設定済み\n- ✅ terraform plan が成功",
+          "labels": ["P2-Medium", "infrastructure", "terraform"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-6.1"],
+          "estimatedHours": 5
+        },
+        {
+          "number": "AGv5-6.3",
+          "title": "[サブ] ブートストラップスクリプト作成",
+          "description": "## タスク\nワンコマンドで全設定を復旧できるブートストラップスクリプトを作成します。\n\n## 実装\n```bash\n#!/bin/bash\n# scripts/bootstrap.sh\n\nset -euo pipefail\n\necho \"🚀 Bootstrapping article-generator system...\"\n\n# 1. Terraform 初期化\ncd terraform\nterraform init\n\n# 2. プラン確認\nterraform plan -out=tfplan\n\n# 3. 適用\nread -p \"Apply? (yes/no): \" confirm\nif [ \"$confirm\" = \"yes\" ]; then\n  terraform apply tfplan\n  echo \"✅ System bootstrapped successfully!\"\nelse\n  echo \"❌ Bootstrap cancelled\"\nfi\n```\n\n## 使用方法\n```bash\nexport GITHUB_TOKEN=ghp_xxx\n./scripts/bootstrap.sh\n```\n\n## 成功基準\n- ✅ スクリプトが実行できる\n- ✅ 全設定が復旧される\n- ✅ エラーハンドリングが動作",
+          "labels": ["P2-Medium", "infrastructure", "terraform"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-6.2"],
+          "estimatedHours": 2
+        },
+        {
+          "number": "AGv5-6.4",
+          "title": "[サブ] 災害復旧手順書作成",
+          "description": "## タスク\nシステム破壊時の復旧手順を詳細にドキュメント化します。\n\n## ドキュメント\n`docs/DISASTER_RECOVERY.md`\n\n```markdown\n# 災害復旧手順\n\n## 前提条件\n- Guardian アカウントの GitHub アクセス\n- `system-as-code` リポジトリへのアクセス\n\n## 復旧手順\n\n### 1. 状況確認\n- [ ] `.github` ディレクトリが存在するか\n- [ ] ワークフローが実行可能か\n- [ ] Secrets が設定されているか\n\n### 2. ブートストラップ実行\n```bash\ngit clone https://github.com/hiromima/system-as-code.git\ncd system-as-code\nexport GITHUB_TOKEN=ghp_xxx\n./scripts/bootstrap.sh\n```\n\n### 3. 検証\n- [ ] 全ワークフローが存在\n- [ ] ブランチ保護が有効\n- [ ] Secrets が設定済み\n```\n\n## 成功基準\n- ✅ 手順書が完備\n- ✅ 復旧時間が30分以内\n- ✅ 検証項目が明確",
+          "labels": ["P2-Medium", "infrastructure", "documentation"],
+          "assignedAgent": "CoordinatorAgent",
+          "dependencies": ["AGv5-6.3"],
+          "estimatedHours": 2
+        }
+      ]
+    }
+  ],
+  "executionPlan": {
+    "phase1_critical": [
+      "AGv5-1: Economic Governance Protocol",
+      "AGv5-3: Graceful Degradation & Human Escalation"
+    ],
+    "phase2_high_priority": [
+      "AGv5-2: Knowledge Persistence Layer",
+      "AGv5-4: Automation Infrastructure Security"
+    ],
+    "phase3_medium_priority": [
+      "AGv5-5: Autonomous Agent Onboarding",
+      "AGv5-6: Disaster Recovery Protocol"
+    ]
+  },
+  "estimatedTotalHours": 78
+}

@@ -1,0 +1,34 @@
+{
+  "qualityReport": {
+    "overallScore": 85,
+    "dimensions": {
+      "content": 88,
+      "structure": 82,
+      "seo": 85,
+      "readability": 90,
+      "engagement": 80
+    },
+    "strengths": [
+      "実践的なコード例が豊富",
+      "論理的な構成",
+      "読者にとって有用な情報"
+    ],
+    "weaknesses": [
+      "一部セクションの詳細不足",
+      "内部リンクの不足"
+    ]
+  },
+  "improvementSuggestions": [
+    "具体的な実装例を1-2個追加",
+    "関連記事への内部リンクを設置",
+    "まとめセクションにアクションプランを追加"
+  ],
+  "approvalStatus": {
+    "approved": true,
+    "requiresRevision": false,
+    "criticalIssues": [],
+    "minorIssues": [
+      "内部リンク不足"
+    ]
+  }
+}
