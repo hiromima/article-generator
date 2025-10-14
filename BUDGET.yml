@@ -1,0 +1,62 @@
+# Miyabi Framework - Economic Governance Protocol
+# AGENTS.md v5.0 準拠
+
+# 月次予算 (USD)
+monthly_budget_usd: 100
+
+# コスト内訳の目標配分
+budget_allocation:
+  anthropic_api: 70      # Anthropic API (Claude) - 70 USD
+  firebase: 20           # Firebase Hosting/Functions - 20 USD
+  github_actions: 0      # GitHub Actions - 無料枠内 (3000分/月)
+  buffer: 10             # バッファ - 10 USD
+
+# しきい値設定
+thresholds:
+  warning: 0.8           # 80% で警告
+  emergency: 1.5         # 150% で緊急停止 (Circuit Breaker)
+
+# 緊急時の自動アクション
+emergency_actions:
+  # 緊急停止するワークフロー
+  disable_workflows:
+    - autonomous-agent.yml
+    - webhook-handler.yml
+    - weekly-kpi-report.yml
+
+  # Guardian への通知設定
+  notify:
+    - github_issue       # GitHub Issue 作成
+    - workflow_disable   # ワークフロー自動無効化
+
+  # リカバリー要件
+  recovery_requires:
+    - guardian_approval  # Guardian の承認
+    - budget_review      # 予算の見直し
+    - cost_analysis      # コスト分析完了
+
+# モニタリング設定
+monitoring:
+  check_interval: hourly            # 1時間ごとにチェック
+  metrics_retention_days: 90        # メトリクス保持期間
+  alert_channels:
+    - github_issues                 # GitHub Issues
+    - workflow_logs                 # ワークフローログ
+
+# コスト最適化ルール
+optimization:
+  # 自動最適化の有効化
+  auto_optimize: true
+
+  # 最適化ターゲット
+  targets:
+    - reduce_redundant_workflows    # 冗長ワークフローの削減
+    - cache_optimization            # キャッシュ最適化
+    - workflow_concurrency          # 並列実行制御
+
+# 備考
+notes: |
+  このファイルは Economic Circuit Breaker ワークフローによって参照されます。
+  予算を変更する場合は、Guardian の承認が必要です。
+
+  参考: .github/workflows/economic-circuit-breaker.yml

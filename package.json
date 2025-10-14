@@ -1,0 +1,41 @@
+{
+  "name": "article-generator",
+  "version": "1.0.0",
+  "description": "Miyabi Framework - Autonomous Development Environment for Article Generation",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "state:transition": "tsx scripts/state-transition.ts",
+    "agents:parallel:exec": "tsx scripts/agents-parallel-exec.ts",
+    "webhook:router": "tsx scripts/webhook-router.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "build": "tsc",
+    "dev": "tsx watch scripts/dev.ts"
+  },
+  "keywords": [
+    "miyabi",
+    "autonomous",
+    "ai-agents",
+    "article-generator",
+    "github-os"
+  ],
+  "author": "hiromima",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@octokit/rest": "^21.0.2",
+    "@octokit/graphql": "^8.1.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "eslint": "^9.17.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
