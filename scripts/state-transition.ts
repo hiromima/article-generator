@@ -25,10 +25,16 @@ async function parseArgs(): Promise<StateTransitionArgs> {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith('--')) {
-      const key = args[i].slice(2);
-      const value = args[i + 1];
-      params[key] = value;
-      i++;
+      // Support both --key=value and --key value formats
+      if (args[i].includes('=')) {
+        const [key, value] = args[i].slice(2).split('=');
+        params[key] = value;
+      } else {
+        const key = args[i].slice(2);
+        const value = args[i + 1];
+        params[key] = value;
+        i++;
+      }
     }
   }
 
