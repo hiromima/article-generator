@@ -65,43 +65,46 @@ jobs:
 
       - name: Create Issue for Failure
         id: create-issue
-        uses: dacbd/create-issue-action@main
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "🚨 Self-Healing: ${{ github.event.workflow_run.name }} failure"
-          body: |
-            ## ワークフローエラー検出
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_URL=$(gh issue create \
+            --title "🚨 Self-Healing: ${{ github.event.workflow_run.name }} failure" \
+            --body "## ワークフローエラー検出
 
-            **ワークフロー**: `${{ github.event.workflow_run.name }}`
-            **Run ID**: `${{ github.event.workflow_run.id }}`
-            **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
-            **Branch**: `${{ github.event.workflow_run.head_branch }}`
-            **Commit**: `${{ github.event.workflow_run.head_sha }}`
-            **トリガー**: `${{ github.event.workflow_run.event }}`
-            **実行者**: @${{ github.event.workflow_run.actor.login }}
+          **ワークフロー**: \`${{ github.event.workflow_run.name }}\`
+          **Run ID**: \`${{ github.event.workflow_run.id }}\`
+          **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+          **Branch**: \`${{ github.event.workflow_run.head_branch }}\`
+          **Commit**: \`${{ github.event.workflow_run.head_sha }}\`
+          **トリガー**: \`${{ github.event.workflow_run.event }}\`
+          **実行者**: @${{ github.event.workflow_run.actor.login }}
 
-            ### エラー概要
+          ### エラー概要
 
-            ```json
-            ${{ steps.get-logs.outputs.error_summary }}
-            ```
+          \`\`\`json
+          ${{ steps.get-logs.outputs.error_summary }}
+          \`\`\`
 
-            ### ワークフローファイル
+          ### ワークフローファイル
 
-            - **Path**: `${{ steps.get-workflow.outputs.workflow_file }}`
-            - **Exists**: `${{ steps.get-workflow.outputs.workflow_exists }}`
+          - **Path**: \`${{ steps.get-workflow.outputs.workflow_file }}\`
+          - **Exists**: \`${{ steps.get-workflow.outputs.workflow_exists }}\`
 
-            ---
+          ---
 
-            🤖 **Self-Healing Agent が自動修復を開始しました**
+          🤖 **Self-Healing Agent が自動修復を開始しました**
 
-            このIssueは自動でクローズされます。
-          labels: |
-            type:bug
-            priority:P0-Critical
-            agent:self-healing
-            state:auto-fixing
-          assignees: ${{ github.event.workflow_run.actor.login }}
+          このIssueは自動でクローズされます。" \
+            --label "type:bug" \
+            --label "priority:P0-Critical" \
+            --label "agent:self-healing" \
+            --label "state:auto-fixing" \
+            --assignee "${{ github.event.workflow_run.actor.login }}")
+
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+          echo "issue-number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "✅ Created Issue #${ISSUE_NUMBER}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
