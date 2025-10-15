@@ -31,8 +31,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install yq for YAML parsing
+      - name: Install yq for YAML parsing and bc for calculations
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bc
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 

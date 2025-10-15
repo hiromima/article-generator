@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'issues' && github.event.action == 'opened'
     name: Initial Triage
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -86,6 +87,7 @@ jobs:
       github.event.action == 'labeled' &&
       contains(github.event.label.name, 'agent:coordinator')
     name: Coordinator Assignment
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -124,6 +126,7 @@ jobs:
        contains(github.event.label.name, 'agent:issue') ||
        contains(github.event.label.name, 'agent:pr'))
     name: Specialist Assignment
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -157,6 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.action == 'opened'
     name: PR Created - Start Review
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -218,6 +222,7 @@ jobs:
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true
     name: PR Merged - Mark Done
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -268,6 +273,7 @@ jobs:
       github.event.action == 'labeled' &&
       contains(github.event.label.name, 'state:blocked')
     name: Blocked - Escalate
+    continue-on-error: true
 
     steps:
       - name: Create escalation comment
