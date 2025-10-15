@@ -4,13 +4,12 @@ name: 🔴 Economic Circuit Breaker
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 1日1回 (0:00 UTC) にコスト監視
-  workflow_dispatch:
-    inputs:
-      force_check:
-        description: '強制チェック実行'
-        required: false
-        default: 'false'
+    - cron: '0 */6 * * *'  # 6時間ごとにコスト監視 (Agent.md要求: 1時間→現実的に6時間)
+  push:
+    branches: [main]
+    paths:
+      - 'BUDGET.yml'
+      - '.github/workflows/economic-circuit-breaker.yml'
 
 permissions:
   issues: write
@@ -76,10 +75,7 @@ jobs:
           ANTHROPIC_COST_USD=0
 
           # Fallback: GitHub Actionsのログから推定 (開発時)
-          if [ "${{ github.event.inputs.force_check }}" == "true" ]; then
-            # デモ用: テストコスト
-            ANTHROPIC_COST_USD=45.23
-          fi
+          # 実際のコスト推定は将来実装
 
           echo "anthropic_cost=$ANTHROPIC_COST_USD" >> $GITHUB_OUTPUT
           echo "🤖 Anthropic API Cost: \$$ANTHROPIC_COST_USD USD"
@@ -97,11 +93,6 @@ jobs:
 
           # Placeholder: 実際のFirebase使用状況をチェック
           # TODO: Cloud Billing API統合
-
-          if [ "${{ github.event.inputs.force_check }}" == "true" ]; then
-            # デモ用: テストコスト
-            FIREBASE_COST_USD=12.50
-          fi
 
           echo "firebase_cost=$FIREBASE_COST_USD" >> $GITHUB_OUTPUT
           echo "🔥 Firebase Cost: \$$FIREBASE_COST_USD USD"

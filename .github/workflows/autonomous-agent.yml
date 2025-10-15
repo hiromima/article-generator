@@ -1,12 +1,10 @@
 name: Autonomous Agent Execution
 
 on:
-  workflow_dispatch:
-    inputs:
-      issue_number:
-        description: 'Issue number to process'
-        required: true
-        type: number
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
 
 env:
   NODE_VERSION: '20'
@@ -25,13 +23,6 @@ jobs:
         run: |
           SHOULD_EXECUTE="false"
           ISSUE_NUMBER=""
-
-          # Check if manually triggered
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SHOULD_EXECUTE="true"
-            ISSUE_NUMBER="${{ github.event.inputs.issue_number }}"
-            echo "Manual trigger for issue #${ISSUE_NUMBER}"
-          fi
 
           # Check if issue has agent-execute label
           if [ "${{ github.event_name }}" = "issues" ]; then
