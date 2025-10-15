@@ -9,6 +9,7 @@
     "agents:parallel:exec": "tsx scripts/agents-parallel-exec.ts",
     "webhook:router": "tsx scripts/webhook-router.ts",
     "coordinator:analyze": "tsx scripts/coordinator-cli.ts",
+    "codegen:generate": "tsx scripts/codegen-cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.js",
     "test": "jest",
