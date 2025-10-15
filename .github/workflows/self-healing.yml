@@ -1,3 +1,23 @@
+# Self-Healing Agent
+# Purpose: Automatically detect and fix workflow failures using Gemini AI
+# Triggers: Executes when monitored workflows complete with failure status
+# Features:
+#   - Automatic issue creation with error details
+#   - AI-powered error analysis using Gemini
+#   - Automatic fix generation and PR creation
+#   - Auto-merge after validation
+#   - Issue auto-close on success
+# Requirements:
+#   - PAT_TOKEN secret (for PR creation)
+#   - GEMINI_API_KEY secret (for AI analysis)
+# Monitored workflows:
+#   - Test Self-Healing Agent
+#   - Gemini CLI - AI Code Assistant
+#   - Webhook Event Handler
+#   - Autonomous Agent Execution
+#   - State Machine Automation
+#   - Economic Circuit Breaker
+
 name: 🔧 Self-Healing Agent
 
 on:
@@ -327,43 +347,78 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
           PR_NUMBER="${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "::notice::Attempting to auto-merge PR #${PR_NUMBER}"
 
-          echo "🤖 Auto-merging PR #${PR_NUMBER}..."
-
-          # Enable auto-merge with squash
-          gh pr merge "${PR_NUMBER}" \
+          # Enable auto-merge with squash and error handling
+          if gh pr merge "${PR_NUMBER}" \
             --auto \
             --squash \
             --delete-branch \
-            --body "🤖 Auto-merged by Self-Healing Agent" || {
-              echo "⚠️ Auto-merge failed. PR requires manual review."
-              gh pr comment "${PR_NUMBER}" --body "⚠️ 自動マージに失敗しました。手動レビューが必要です。"
-              exit 0
-            }
-
-          echo "✅ Auto-merge enabled for PR #${PR_NUMBER}"
+            --body "🤖 Auto-merged by Self-Healing Agent" 2>&1; then
+            echo "::notice::Auto-merge enabled for PR #${PR_NUMBER}"
+          else
+            echo "::warning::Auto-merge failed for PR #${PR_NUMBER}. Manual review required."
+            gh pr comment "${PR_NUMBER}" --body "⚠️ 自動マージに失敗しました。手動レビューが必要です。" || echo "::error::Failed to add comment to PR"
+            exit 0
+          fi
 
       - name: Close Issue
         if: steps.create-pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+          trap 'echo "::error::Failed to close issue at line $LINENO"' ERR
+
           ISSUE_NUMBER="${{ steps.create-issue.outputs.issue-number }}"
           PR_NUMBER="${{ steps.create-pr.outputs.pull-request-number }}"
 
-          gh issue comment "${ISSUE_NUMBER}" --body "✅ 自動修復完了。PR #${PR_NUMBER} で修正されました。"
-          gh issue close "${ISSUE_NUMBER}" --reason "completed"
+          echo "::notice::Closing issue #${ISSUE_NUMBER}"
 
-          echo "✅ Issue #${ISSUE_NUMBER} closed"
+          # Add comment with error handling
+          if ! gh issue comment "${ISSUE_NUMBER}" --body "✅ 自動修復完了。PR #${PR_NUMBER} で修正されました。" 2>&1; then
+            echo "::warning::Failed to add comment to issue #${ISSUE_NUMBER}"
+          fi
+
+          # Close issue with error handling
+          if gh issue close "${ISSUE_NUMBER}" --reason "completed" 2>&1; then
+            echo "::notice::Successfully closed issue #${ISSUE_NUMBER}"
+          else
+            echo "::error::Failed to close issue #${ISSUE_NUMBER}"
+            exit 1
+          fi
 
       - name: Notify on failure
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
           ISSUE_NUMBER="${{ steps.create-issue.outputs.issue-number }}"
 
-          gh issue comment "${ISSUE_NUMBER}" --body "❌ 自動修復に失敗しました。手動での対応が必要です。"
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "::error::Cannot notify - Issue number not available"
+            exit 0
+          fi
 
-          echo "❌ Self-healing failed. Manual intervention required."
+          echo "::warning::Self-healing process failed. Notifying issue #${ISSUE_NUMBER}"
+
+          # Add failure comment with error handling
+          FAILURE_MESSAGE="❌ 自動修復に失敗しました。
+
+**失敗したステップ**: 確認してください
+**ワークフロー**: ${{ github.workflow }}
+**Run ID**: ${{ github.run_id }}
+**Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+手動での対応が必要です。"
+
+          if gh issue comment "${ISSUE_NUMBER}" --body "$FAILURE_MESSAGE" 2>&1; then
+            echo "::notice::Failure notification added to issue #${ISSUE_NUMBER}"
+          else
+            echo "::error::Failed to add failure notification to issue"
+          fi
