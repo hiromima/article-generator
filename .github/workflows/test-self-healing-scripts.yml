@@ -1,0 +1,57 @@
+# Test Self-Healing Agent Scripts
+# Purpose: Unit tests for self-healing shell scripts
+# Runs: On push to main and PR
+
+name: Test Self-Healing Scripts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/self-healing/**'
+      - 'tests/self-healing/**'
+      - '.github/workflows/test-self-healing-scripts.yml'
+  pull_request:
+    paths:
+      - 'scripts/self-healing/**'
+      - 'tests/self-healing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+
+      - name: Run bats tests
+        run: |
+          bats tests/self-healing/*.bats
+
+      - name: Test script execution
+        run: |
+          # Test get-workflow-path.sh directly
+          export GITHUB_OUTPUT=$(mktemp)
+          bash scripts/self-healing/get-workflow-path.sh "Test Self-Healing Agent"
+
+          echo "::notice::Testing script output:"
+          cat "$GITHUB_OUTPUT"
+
+          # Verify output format
+          if grep -q "workflow_file=" "$GITHUB_OUTPUT" && grep -q "workflow_exists=" "$GITHUB_OUTPUT"; then
+            echo "::notice::Script output format is correct"
+          else
+            echo "::error::Script output format is incorrect"
+            exit 1
+          fi

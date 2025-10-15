@@ -52,22 +52,7 @@ jobs:
 
       - name: Get workflow file path
         id: get-workflow
-        run: |
-          set -euo pipefail
-          trap 'echo "::error::Failed to get workflow file path at line $LINENO"' ERR
-
-          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
-          WORKFLOW_FILE=$(find .github/workflows -name "*.yml" -o -name "*.yaml" -print0 | xargs -0 grep -l "name: ${WORKFLOW_NAME}" | head -1 || echo "")
-
-          if [ -z "$WORKFLOW_FILE" ]; then
-            echo "::warning::Workflow file not found for: ${WORKFLOW_NAME}"
-            echo "workflow_file=.github/workflows/unknown.yml" >> "$GITHUB_OUTPUT"
-            echo "workflow_exists=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::Found workflow file: ${WORKFLOW_FILE}"
-            echo "workflow_file=${WORKFLOW_FILE}" >> "$GITHUB_OUTPUT"
-            echo "workflow_exists=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash scripts/self-healing/get-workflow-path.sh "${{ github.event.workflow_run.name }}"
 
       - name: Get workflow logs
         id: get-logs
