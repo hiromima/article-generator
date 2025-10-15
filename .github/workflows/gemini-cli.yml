@@ -28,7 +28,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.13
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          command: |
+          prompt: |
             Review this pull request for:
             - Code quality and best practices
             - TypeScript strict mode compliance
@@ -52,7 +52,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.13
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          command: |
+          prompt: |
             Analyze this issue and suggest:
             - Appropriate labels (type, priority, complexity, effort)
             - Task breakdown if it's a large feature
@@ -104,7 +104,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.13
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          command: |
+          prompt: |
             Based on this issue, generate the required code:
             - Follow TypeScript strict mode
             - Include comprehensive JSDoc comments
