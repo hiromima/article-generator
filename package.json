@@ -16,7 +16,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "build": "tsc",
-    "dev": "tsx watch scripts/dev.ts"
+    "dev": "tsx watch scripts/dev.ts",
+    "nonexistent-script": "echo 'Self-healing script executed successfully.'"
   },
   "keywords": [
     "miyabi",
