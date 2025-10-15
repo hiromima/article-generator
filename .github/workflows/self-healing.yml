@@ -2,7 +2,13 @@ name: 🔧 Self-Healing Agent
 
 on:
   workflow_run:
-    workflows: ["*"]
+    workflows:
+      - "Test Self-Healing Agent"
+      - "Gemini CLI - AI Code Assistant"
+      - "Webhook Event Handler"
+      - "Autonomous Agent Execution"
+      - "State Machine Automation"
+      - "Economic Circuit Breaker"
     types: [completed]
 
 permissions:
