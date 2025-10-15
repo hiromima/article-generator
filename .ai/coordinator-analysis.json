@@ -1,0 +1,336 @@
+{
+  "masterIssue": {
+    "number": 16,
+    "title": "🎯 [MASTER] article-generator プロジェクト要件定義",
+    "description": "Miyabi Framework Phase 2/3 実装と記事生成システム統合"
+  },
+  "taskBreakdown": {
+    "phase2_agents": {
+      "epic": "Phase 2: AI Agents実装",
+      "priority": "P0-Critical",
+      "estimatedDuration": "2-3週間",
+      "subIssues": [
+        {
+          "id": "2.1",
+          "title": "CoordinatorAgent 完全実装",
+          "description": "DAGベースタスク分解、Wave並列実行計画、Critical Path特定",
+          "agent": "agent:codegen",
+          "complexity": "xlarge",
+          "effort": "1w",
+          "priority": "P0-Critical",
+          "dependencies": [],
+          "acceptanceCriteria": [
+            "Issue番号を受け取りタスク分解できる",
+            "DAG構造で依存関係を管理できる",
+            "Wave並列実行計画を生成できる",
+            "Critical Pathを特定できる",
+            "50%以上の効率化を達成"
+          ]
+        },
+        {
+          "id": "2.2",
+          "title": "CodeGenAgent 実装",
+          "description": "Claude Sonnet 4統合、TypeScript strict mode対応、テストコード自動生成",
+          "agent": "agent:codegen",
+          "complexity": "xlarge",
+          "effort": "1w",
+          "priority": "P0-Critical",
+          "dependencies": [],
+          "acceptanceCriteria": [
+            "Claude Sonnet 4でコード生成できる",
+            "TypeScript strict mode完全対応",
+            "テストコード自動生成",
+            "ドキュメント自動生成",
+            "0エラーでコンパイル成功"
+          ]
+        },
+        {
+          "id": "2.3",
+          "title": "ReviewAgent 実装",
+          "description": "静的解析、セキュリティスキャン、品質スコアリング",
+          "agent": "agent:review",
+          "complexity": "large",
+          "effort": "4d",
+          "priority": "P0-Critical",
+          "dependencies": ["2.2"],
+          "acceptanceCriteria": [
+            "ESLint静的解析実行",
+            "TypeScriptコンパイルチェック",
+            "npm auditセキュリティスキャン",
+            "100点満点で品質スコアリング",
+            "80点以上で自動承認"
+          ]
+        },
+        {
+          "id": "2.4",
+          "title": "PRAgent 実装",
+          "description": "Draft PR自動作成、Conventional Commits準拠",
+          "agent": "agent:pr",
+          "complexity": "medium",
+          "effort": "3d",
+          "priority": "P1-High",
+          "dependencies": ["2.2", "2.3"],
+          "acceptanceCriteria": [
+            "Draft PR自動生成",
+            "Conventional Commits形式",
+            "変更サマリー自動生成",
+            "レビュアー自動アサイン"
+          ]
+        },
+        {
+          "id": "2.5",
+          "title": "TestAgent 実装",
+          "description": "テスト自動実行、カバレッジレポート生成",
+          "agent": "agent:test",
+          "complexity": "large",
+          "effort": "4d",
+          "priority": "P1-High",
+          "dependencies": ["2.2"],
+          "acceptanceCriteria": [
+            "全テスト自動実行",
+            "カバレッジレポート生成",
+            "80%+カバレッジ目標",
+            "失敗時の詳細レポート"
+          ]
+        },
+        {
+          "id": "2.6",
+          "title": "DeploymentAgent 実装",
+          "description": "Firebase自動デプロイ、ヘルスチェック、自動ロールバック",
+          "agent": "agent:deployment",
+          "complexity": "large",
+          "effort": "4d",
+          "priority": "P1-High",
+          "dependencies": ["2.2", "2.3", "2.5"],
+          "acceptanceCriteria": [
+            "Firebase Hosting自動デプロイ",
+            "ヘルスチェック（5回リトライ）",
+            "失敗時の自動ロールバック",
+            "デプロイ成功/失敗のIssueコメント"
+          ]
+        }
+      ]
+    },
+    "phase2_infrastructure": {
+      "epic": "Phase 2: インフラ強化",
+      "priority": "P1-High",
+      "estimatedDuration": "1週間",
+      "subIssues": [
+        {
+          "id": "2.7",
+          "title": "Economic Circuit Breaker 強化",
+          "description": "Anthropic/Firebase Billing API統合、1時間ごとの監視",
+          "agent": "agent:codegen",
+          "complexity": "medium",
+          "effort": "3d",
+          "priority": "P1-High",
+          "dependencies": [],
+          "acceptanceCriteria": [
+            "Anthropic Billing API統合",
+            "Firebase Billing API統合",
+            "1時間ごとの監視に変更",
+            "実際のコストを正確に取得"
+          ]
+        },
+        {
+          "id": "2.8",
+          "title": "GitHub Actions ワークフロー統合",
+          "description": "各AgentをGitHub Actionsに統合",
+          "agent": "agent:coordinator",
+          "complexity": "large",
+          "effort": "4d",
+          "priority": "P1-High",
+          "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+          "acceptanceCriteria": [
+            "autonomous-agent.ymlにCoordinatorAgent統合",
+            "CodeGenAgent実行ワークフロー",
+            "ReviewAgent実行ワークフロー",
+            "PRAgent実行ワークフロー",
+            "TestAgent実行ワークフロー",
+            "DeploymentAgent実行ワークフロー"
+          ]
+        }
+      ]
+    },
+    "phase3_advanced": {
+      "epic": "Phase 3: 高度な機能",
+      "priority": "P2-Medium",
+      "estimatedDuration": "2-3週間",
+      "subIssues": [
+        {
+          "id": "3.1",
+          "title": "IncidentCommanderAgent 実装",
+          "description": "3回失敗時の自動エスカレーション、Graceful Degradation",
+          "agent": "agent:codegen",
+          "complexity": "xlarge",
+          "effort": "1w",
+          "priority": "P2-Medium",
+          "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+          "acceptanceCriteria": [
+            "失敗パターン検出",
+            "自動リトライ（3回まで）",
+            "Guardian緊急Issue作成",
+            "システム縮退運転"
+          ]
+        },
+        {
+          "id": "3.2",
+          "title": "Knowledge Persistence Layer 実装",
+          "description": "Vector Database統合、類似Issue検索、成功パターン再利用",
+          "agent": "agent:codegen",
+          "complexity": "xlarge",
+          "effort": "2w",
+          "priority": "P2-Medium",
+          "dependencies": ["2.1"],
+          "acceptanceCriteria": [
+            "Vector Database統合（Pinecone/Chroma）",
+            "類似Issue検索機能",
+            "成功パターンの保存・再利用",
+            "失敗パターンの記録・回避"
+          ]
+        }
+      ]
+    },
+    "article_integration": {
+      "epic": "記事生成システム統合",
+      "priority": "P2-Medium",
+      "estimatedDuration": "1-2週間",
+      "subIssues": [
+        {
+          "id": "4.1",
+          "title": "記事生成エージェントのMiyabi統合",
+          "description": "agent:article-generatorラベルでIssueトリガー記事生成",
+          "agent": "agent:codegen",
+          "complexity": "medium",
+          "effort": "3d",
+          "priority": "P2-Medium",
+          "dependencies": ["2.1"],
+          "acceptanceCriteria": [
+            "agent:article-generatorラベル作成",
+            "Issueトリガーで記事生成",
+            "OneStopPublisherとの統合",
+            "ModularAgentChainとの統合"
+          ]
+        },
+        {
+          "id": "4.2",
+          "title": "記事品質チェックのReviewAgent統合",
+          "description": "総合スコア80点以上で自動承認、リンク有効性100%",
+          "agent": "agent:review",
+          "complexity": "medium",
+          "effort": "3d",
+          "priority": "P2-Medium",
+          "dependencies": ["2.3", "4.1"],
+          "acceptanceCriteria": [
+            "総合スコア80点以上で承認",
+            "リンク有効性100%チェック",
+            "note.comブロック構造対応確認",
+            "品質レポート自動生成"
+          ]
+        },
+        {
+          "id": "4.3",
+          "title": "note.com投稿のDeploymentAgent統合",
+          "description": "自動投稿、ヘルスチェック、失敗時のロールバック",
+          "agent": "agent:deployment",
+          "complexity": "medium",
+          "effort": "3d",
+          "priority": "P2-Medium",
+          "dependencies": ["2.6", "4.1", "4.2"],
+          "acceptanceCriteria": [
+            "note.com自動投稿",
+            "投稿成功確認（ヘルスチェック）",
+            "失敗時の記事削除/ロールバック",
+            "投稿URLのIssueコメント"
+          ]
+        }
+      ]
+    }
+  },
+  "dependencyGraph": {
+    "description": "DAG (Directed Acyclic Graph) による依存関係",
+    "waves": {
+      "wave1": {
+        "description": "前提条件なし - 並列実行可能",
+        "tasks": ["2.1", "2.2", "2.7"],
+        "estimatedDuration": "1週間"
+      },
+      "wave2": {
+        "description": "Wave 1完了後 - 並列実行可能",
+        "tasks": ["2.3", "2.5"],
+        "dependencies": ["2.2"],
+        "estimatedDuration": "4日"
+      },
+      "wave3": {
+        "description": "Wave 2完了後 - 並列実行可能",
+        "tasks": ["2.4", "2.6"],
+        "dependencies": ["2.2", "2.3", "2.5"],
+        "estimatedDuration": "4日"
+      },
+      "wave4": {
+        "description": "Wave 3完了後 - GitHub Actions統合",
+        "tasks": ["2.8"],
+        "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+        "estimatedDuration": "4日"
+      },
+      "wave5": {
+        "description": "Phase 2完了後 - Phase 3並列実行可能",
+        "tasks": ["3.1", "3.2", "4.1"],
+        "dependencies": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+        "estimatedDuration": "1週間"
+      },
+      "wave6": {
+        "description": "記事生成統合最終段階",
+        "tasks": ["4.2", "4.3"],
+        "dependencies": ["2.3", "2.6", "4.1"],
+        "estimatedDuration": "3日"
+      }
+    },
+    "criticalPath": {
+      "description": "最長実行経路（Critical Path）",
+      "path": ["2.2", "2.3", "2.6", "2.8", "3.1"],
+      "totalDuration": "約4週間"
+    },
+    "parallelization": {
+      "sequential": "約8週間（順次実行）",
+      "parallel": "約4週間（並列実行）",
+      "efficiency": "50%削減"
+    }
+  },
+  "agentMapping": {
+    "agent:coordinator": {
+      "tasks": ["2.1", "2.8"],
+      "role": "タスク統括・並列実行制御"
+    },
+    "agent:codegen": {
+      "tasks": ["2.2", "2.7", "3.1", "3.2", "4.1"],
+      "role": "AI駆動コード生成"
+    },
+    "agent:review": {
+      "tasks": ["2.3", "4.2"],
+      "role": "コード品質判定"
+    },
+    "agent:pr": {
+      "tasks": ["2.4"],
+      "role": "Pull Request自動作成"
+    },
+    "agent:test": {
+      "tasks": ["2.5"],
+      "role": "テスト自動実行"
+    },
+    "agent:deployment": {
+      "tasks": ["2.6", "4.3"],
+      "role": "CI/CDデプロイ自動化"
+    }
+  },
+  "summary": {
+    "totalTasks": 14,
+    "totalDuration": "約4週間（並列実行）",
+    "phase2Tasks": 8,
+    "phase3Tasks": 2,
+    "integrationTasks": 3,
+    "infrastructureTasks": 1,
+    "agents": 6,
+    "waves": 6
+  }
+}

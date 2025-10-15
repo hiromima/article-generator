@@ -8,9 +8,12 @@
     "state:transition": "tsx scripts/state-transition.ts",
     "agents:parallel:exec": "tsx scripts/agents-parallel-exec.ts",
     "webhook:router": "tsx scripts/webhook-router.ts",
+    "coordinator:analyze": "tsx scripts/coordinator-cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.js",
-    "test": "echo \"No tests yet\" && exit 0",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "build": "tsc",
     "dev": "tsx watch scripts/dev.ts"
   },
