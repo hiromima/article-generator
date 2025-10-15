@@ -58,36 +58,7 @@ jobs:
         id: get-logs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          trap 'echo "::error::Failed to get workflow logs at line $LINENO"' ERR
-
-          RUN_ID="${{ github.event.workflow_run.id }}"
-          echo "::notice::Fetching logs for run ID: ${RUN_ID}"
-
-          # Get failed jobs with error handling
-          if ! FAILED_JOBS=$(gh api "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
-            --jq '.jobs[] | select(.conclusion == "failure") | {name: .name, steps: [.steps[] | select(.conclusion == "failure") | {name: .name, number: .number}]}' 2>&1); then
-            echo "::error::Failed to fetch workflow logs: ${FAILED_JOBS}"
-            exit 1
-          fi
-
-          # Save to file for Gemini
-          echo "$FAILED_JOBS" > /tmp/failed_jobs.json
-
-          # Get logs URL
-          LOGS_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
-          echo "logs_url=${LOGS_URL}" >> "$GITHUB_OUTPUT"
-
-          # Extract error summary
-          ERROR_SUMMARY=$(echo "$FAILED_JOBS" | head -20)
-          {
-            echo "error_summary<<EOF"
-            echo "$ERROR_SUMMARY"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "::notice::Successfully extracted error summary"
+        run: bash scripts/self-healing/get-workflow-logs.sh "${{ github.event.workflow_run.id }}" "${{ github.repository }}"
 
       - name: Create Issue for Failure
         id: create-issue
@@ -160,25 +131,7 @@ jobs:
       - name: Read workflow file
         id: read-workflow
         if: steps.get-workflow.outputs.workflow_exists == 'true'
-        run: |
-          set -euo pipefail
-          trap 'echo "::error::Failed to read workflow file at line $LINENO"' ERR
-
-          WORKFLOW_FILE="${{ steps.get-workflow.outputs.workflow_file }}"
-
-          if [ ! -f "$WORKFLOW_FILE" ]; then
-            echo "::error::Workflow file does not exist: ${WORKFLOW_FILE}"
-            exit 1
-          fi
-
-          WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
-          echo "::notice::Successfully read workflow file: ${WORKFLOW_FILE}"
-
-          {
-            echo "workflow_content<<EOF"
-            echo "$WORKFLOW_CONTENT"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+        run: bash scripts/self-healing/read-workflow.sh "${{ steps.get-workflow.outputs.workflow_file }}"
 
       - name: Analyze and Fix with Gemini
         uses: google-github-actions/run-gemini-cli@v0.1.13
