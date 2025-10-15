@@ -33,42 +33,56 @@ jobs:
       - name: Get workflow file path
         id: get-workflow
         run: |
+          set -euo pipefail
+          trap 'echo "::error::Failed to get workflow file path at line $LINENO"' ERR
+
           WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
-          WORKFLOW_FILE=$(find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs grep -l "name: ${WORKFLOW_NAME}" | head -1)
+          WORKFLOW_FILE=$(find .github/workflows -name "*.yml" -o -name "*.yaml" -print0 | xargs -0 grep -l "name: ${WORKFLOW_NAME}" | head -1 || echo "")
 
           if [ -z "$WORKFLOW_FILE" ]; then
-            echo "workflow_file=.github/workflows/unknown.yml" >> $GITHUB_OUTPUT
-            echo "workflow_exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Workflow file not found for: ${WORKFLOW_NAME}"
+            echo "workflow_file=.github/workflows/unknown.yml" >> "$GITHUB_OUTPUT"
+            echo "workflow_exists=false" >> "$GITHUB_OUTPUT"
           else
-            echo "workflow_file=${WORKFLOW_FILE}" >> $GITHUB_OUTPUT
-            echo "workflow_exists=true" >> $GITHUB_OUTPUT
+            echo "::notice::Found workflow file: ${WORKFLOW_FILE}"
+            echo "workflow_file=${WORKFLOW_FILE}" >> "$GITHUB_OUTPUT"
+            echo "workflow_exists=true" >> "$GITHUB_OUTPUT"
           fi
-
-          echo "Workflow file: ${WORKFLOW_FILE}"
 
       - name: Get workflow logs
         id: get-logs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUN_ID="${{ github.event.workflow_run.id }}"
+          set -euo pipefail
+          trap 'echo "::error::Failed to get workflow logs at line $LINENO"' ERR
 
-          # Get failed jobs
-          FAILED_JOBS=$(gh api "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
-            --jq '.jobs[] | select(.conclusion == "failure") | {name: .name, steps: [.steps[] | select(.conclusion == "failure") | {name: .name, number: .number}]}')
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          echo "::notice::Fetching logs for run ID: ${RUN_ID}"
+
+          # Get failed jobs with error handling
+          if ! FAILED_JOBS=$(gh api "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure") | {name: .name, steps: [.steps[] | select(.conclusion == "failure") | {name: .name, number: .number}]}' 2>&1); then
+            echo "::error::Failed to fetch workflow logs: ${FAILED_JOBS}"
+            exit 1
+          fi
 
           # Save to file for Gemini
           echo "$FAILED_JOBS" > /tmp/failed_jobs.json
 
           # Get logs URL
           LOGS_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
-          echo "logs_url=${LOGS_URL}" >> $GITHUB_OUTPUT
+          echo "logs_url=${LOGS_URL}" >> "$GITHUB_OUTPUT"
 
           # Extract error summary
           ERROR_SUMMARY=$(echo "$FAILED_JOBS" | head -20)
-          echo "error_summary<<EOF" >> $GITHUB_OUTPUT
-          echo "$ERROR_SUMMARY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "error_summary<<EOF"
+            echo "$ERROR_SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "::notice::Successfully extracted error summary"
 
       - name: Create Issue for Failure
         id: create-issue
@@ -85,6 +99,11 @@ jobs:
           WORKFLOW_FILE: ${{ steps.get-workflow.outputs.workflow_file }}
           WORKFLOW_EXISTS: ${{ steps.get-workflow.outputs.workflow_exists }}
         run: |
+          set -euo pipefail
+          trap 'echo "::error::Failed to create issue at line $LINENO"' ERR
+
+          echo "::notice::Creating issue for workflow failure"
+
           # Create issue body using environment variables
           cat > /tmp/issue_body.md << EOF
           ## ワークフローエラー検出
@@ -115,15 +134,18 @@ jobs:
           このIssueは自動でクローズされます。
           EOF
 
-          # Create issue
-          ISSUE_URL=$(gh issue create \
+          # Create issue with error handling
+          if ! ISSUE_URL=$(gh issue create \
             --title "🚨 Self-Healing: ${WORKFLOW_NAME} failure" \
             --body-file /tmp/issue_body.md \
-            --assignee "${ACTOR}")
+            --assignee "${ACTOR}" 2>&1); then
+            echo "::error::Failed to create issue: ${ISSUE_URL}"
+            exit 1
+          fi
 
           ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
-          echo "issue-number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
-          echo "✅ Created Issue #${ISSUE_NUMBER}"
+          echo "issue-number=${ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Created Issue #${ISSUE_NUMBER}: ${ISSUE_URL}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -134,12 +156,24 @@ jobs:
         id: read-workflow
         if: steps.get-workflow.outputs.workflow_exists == 'true'
         run: |
-          WORKFLOW_FILE="${{ steps.get-workflow.outputs.workflow_file }}"
-          WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
+          set -euo pipefail
+          trap 'echo "::error::Failed to read workflow file at line $LINENO"' ERR
 
-          echo "workflow_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$WORKFLOW_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          WORKFLOW_FILE="${{ steps.get-workflow.outputs.workflow_file }}"
+
+          if [ ! -f "$WORKFLOW_FILE" ]; then
+            echo "::error::Workflow file does not exist: ${WORKFLOW_FILE}"
+            exit 1
+          fi
+
+          WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
+          echo "::notice::Successfully read workflow file: ${WORKFLOW_FILE}"
+
+          {
+            echo "workflow_content<<EOF"
+            echo "$WORKFLOW_CONTENT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Analyze and Fix with Gemini
         uses: google-github-actions/run-gemini-cli@v0.1.13
