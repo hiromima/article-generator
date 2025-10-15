@@ -1,0 +1,177 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-10-15",
+  "failures": [
+    {
+      "id": "F001",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "security",
+      "severity": "critical",
+      "title": "API キーをチャットで受け取った",
+      "description": "ユーザーが GEMINI_API_KEY を貼り付けた際、事前に警告せずそのまま受け取ってしまった",
+      "rootCause": "センシティブ情報を検出・拒否する仕組みがなかった",
+      "impact": "API キーが会話履歴に記録され、ユーザーが無効化・再発行する必要が生じた",
+      "solution": "API キーを無効化し、新しいキーを GitHub Secrets に安全に設定",
+      "prevention": {
+        "action": "ユーザー入力前にセンシティブ情報を検出し、安全な設定方法を提示する",
+        "implementation": "sensitive-info-guard.md の検出パターンを使用"
+      },
+      "tags": ["api-key", "security", "sensitive-info"]
+    },
+    {
+      "id": "F002",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "cost",
+      "severity": "high",
+      "title": "API コスト影響を説明しなかった",
+      "description": "Anthropic Claude API を使用する7つのワークフローを作成したが、課金影響を事前に説明しなかった",
+      "rootCause": "API 使用前にコスト影響を分析・説明する習慣がなかった",
+      "impact": "ユーザーが課金リスクに気づき、全体を無料の Gemini API に移行する必要が生じた",
+      "solution": "Gemini API（完全無料）への完全移行",
+      "prevention": {
+        "action": "API 使用前に必ずコスト影響を分析し、無料の代替案を提示する",
+        "implementation": "pre-task-checklist.md の「コスト分析」セクションを実行"
+      },
+      "tags": ["cost", "api", "planning"]
+    },
+    {
+      "id": "F003",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "documentation",
+      "severity": "medium",
+      "title": "GitHub Action のバージョンを確認しなかった",
+      "description": "@v1 タグを使用したが、実際には存在せず @v0.1.13 が正しかった",
+      "rootCause": "公式ドキュメント・リリースページを確認せず、推測で実装した",
+      "impact": "ワークフローが失敗し、修正に時間がかかった",
+      "solution": "リリースページを確認し、@v0.1.13 に修正",
+      "prevention": {
+        "action": "GitHub Action 使用前に必ずリリースページで最新バージョンを確認する",
+        "implementation": "pre-task-checklist.md の「ドキュメント確認」セクションを実行"
+      },
+      "tags": ["github-actions", "version", "documentation"]
+    },
+    {
+      "id": "F004",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "documentation",
+      "severity": "medium",
+      "title": "パラメータ名を確認せずに使用",
+      "description": "command パラメータを使用したが、正しいのは prompt だった",
+      "rootCause": "README を読まず、「多分 command だろう」と推測した",
+      "impact": "ワークフローが失敗し、3箇所を修正する必要が生じた",
+      "solution": "README を確認し、command → prompt に修正",
+      "prevention": {
+        "action": "アクション使用前に必ず README で必須パラメータを確認する",
+        "implementation": "pre-task-checklist.md の「パラメータ確認」セクションを実行"
+      },
+      "tags": ["github-actions", "parameters", "documentation"]
+    },
+    {
+      "id": "F005",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "communication",
+      "severity": "high",
+      "title": "API キー設定方法を明確に指示しなかった",
+      "description": "「GEMINI_API_KEY を設定してください」とだけ言い、安全な設定方法を提示しなかった",
+      "rootCause": "センシティブ情報の取り扱いについての配慮が不足",
+      "impact": "ユーザーがチャットに API キーを貼り付けてしまった（F001 につながる）",
+      "solution": "ターミナルでの安全な設定方法を詳細に説明",
+      "prevention": {
+        "action": "センシティブ情報を要求する前に、必ず安全な設定方法を詳細に説明する",
+        "implementation": "sensitive-info-guard.md の「安全な設定方法」を提示"
+      },
+      "tags": ["communication", "security", "instructions"]
+    },
+    {
+      "id": "F006",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "technical",
+      "severity": "medium",
+      "title": "GitHub Actions の spending limit を誤解",
+      "description": "spending limit の仕組みを理解せず、「Stop usage: Yes = 使用停止」と誤解した",
+      "rootCause": "GitHub Actions の billing の仕組みを理解していなかった",
+      "impact": "ユーザーに「なんでリミットをYesにしたら動かせないんだよ？」と指摘された",
+      "solution": "spending limit = 予算上限であり、$5 なら $5 まで使える",
+      "prevention": {
+        "action": "GitHub Actions 使用前に billing の仕組みを確認する",
+        "implementation": "pre-task-checklist.md の「GitHub Actions 確認」セクションを実行"
+      },
+      "tags": ["github-actions", "billing", "misunderstanding"]
+    },
+    {
+      "id": "F007",
+      "date": "2025-10-15",
+      "wave": 4,
+      "issue": 25,
+      "category": "technical",
+      "severity": "medium",
+      "title": "Private/Public リポジトリの影響を考慮しなかった",
+      "description": "Private リポジトリでは Actions の無料枠が 2,000分/月で、spending limit が $0 だと実行できない",
+      "rootCause": "リポジトリの visibility が Actions に与える影響を知らなかった",
+      "impact": "ワークフローが実行できず、Public 化と spending limit 設定が必要になった",
+      "solution": "リポジトリを Public に変更し、Actions を無制限に使えるようにした",
+      "prevention": {
+        "action": "GitHub Actions 使用前にリポジトリの visibility と無料枠を確認する",
+        "implementation": "pre-task-checklist.md の「リポジトリ設定確認」セクションを実行"
+      },
+      "tags": ["github-actions", "repository", "visibility"]
+    },
+    {
+      "id": "F008",
+      "date": "2025-10-15",
+      "wave": 1,
+      "category": "efficiency",
+      "severity": "medium",
+      "title": "並行して7つのワークフローを作成",
+      "description": "7つの Agent ワークフローを同時に作成し、全てに同じ問題（課金）が発生",
+      "rootCause": "段階的実装をせず、一度に大量の変更を行った",
+      "impact": "7つすべてを修正する必要が生じ、時間を浪費した",
+      "solution": "1つずつ作成・テストする段階的アプローチに変更",
+      "prevention": {
+        "action": "最初の1つを完全に動作させてから、残りに展開する",
+        "implementation": "pre-task-checklist.md の「段階的実装」セクションを実行"
+      },
+      "tags": ["efficiency", "incremental", "workflow"]
+    }
+  ],
+  "statistics": {
+    "totalFailures": 8,
+    "bySeverity": {
+      "critical": 1,
+      "high": 2,
+      "medium": 5
+    },
+    "byCategory": {
+      "security": 2,
+      "cost": 1,
+      "documentation": 2,
+      "communication": 1,
+      "technical": 2,
+      "efficiency": 1
+    }
+  },
+  "improvements": {
+    "implemented": [
+      "failure-database.json の作成",
+      "pre-task-checklist.md の作成",
+      "sensitive-info-guard.md の作成"
+    ],
+    "planned": [
+      "自動チェック機構の実装",
+      "進捗報告の自動化",
+      "失敗予測システムの構築"
+    ]
+  }
+}

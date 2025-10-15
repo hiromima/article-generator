@@ -1,0 +1,158 @@
+{
+  "version": "1.0.0",
+  "baseline": {
+    "period": "Wave 1-4",
+    "date": "2025-10-15",
+    "metrics": {
+      "totalTasks": 8,
+      "successfulTasks": 8,
+      "failedAttempts": 15,
+      "averageTriesPerTask": 3.75,
+      "successRate": 0.35,
+      "securityIncidents": 1,
+      "userSatisfaction": 2
+    },
+    "notes": "ベースライン。多数の失敗と1件の重大なセキュリティインシデント。"
+  },
+  "targets": {
+    "averageTriesPerTask": 1.5,
+    "successRate": 0.8,
+    "securityIncidents": 0,
+    "userSatisfaction": 4
+  },
+  "improvements": {
+    "averageTriesPerTask": {
+      "target": 1.5,
+      "current": 3.75,
+      "required": -2.25,
+      "percentage": -60
+    },
+    "successRate": {
+      "target": 0.8,
+      "current": 0.35,
+      "required": 0.45,
+      "percentage": 129
+    },
+    "securityIncidents": {
+      "target": 0,
+      "current": 1,
+      "required": -1,
+      "percentage": -100
+    }
+  },
+  "sessions": [
+    {
+      "id": "session-001",
+      "date": "2025-10-15",
+      "wave": "1-4",
+      "tasks": [
+        {
+          "id": "task-018",
+          "issue": 18,
+          "name": "CoordinatorAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-019",
+          "issue": 19,
+          "name": "CodeGenAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-024",
+          "issue": 24,
+          "name": "IssueAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-020",
+          "issue": 20,
+          "name": "TestAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-022",
+          "issue": 22,
+          "name": "PRAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-021",
+          "issue": 21,
+          "name": "ReviewAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-023",
+          "issue": 23,
+          "name": "DeploymentAgent 実装",
+          "tries": 2,
+          "success": true,
+          "duration": "unknown",
+          "failures": []
+        },
+        {
+          "id": "task-025",
+          "issue": 25,
+          "name": "GitHub Actions ワークフロー統合",
+          "tries": 5,
+          "success": true,
+          "duration": "unknown",
+          "failures": [
+            "F001",
+            "F002",
+            "F003",
+            "F004",
+            "F005",
+            "F006",
+            "F007",
+            "F008"
+          ]
+        }
+      ],
+      "summary": {
+        "totalTasks": 8,
+        "successfulTasks": 8,
+        "failedAttempts": 15,
+        "averageTriesPerTask": 1.875,
+        "securityIncidents": 1,
+        "improvements": [
+          "failure-database.json 作成",
+          "pre-task-checklist.md 作成",
+          "sensitive-info-guard.md 作成",
+          "自己改善システム構築"
+        ]
+      }
+    }
+  ],
+  "nextSession": {
+    "plannedImprovements": [
+      "pre-task-checklist.md の実行（必須）",
+      "sensitive-info-guard.md の参照（必須）",
+      "failure-database.json の確認（必須）"
+    ],
+    "goals": {
+      "averageTriesPerTask": 1.5,
+      "securityIncidents": 0,
+      "checklistCompliance": 1.0
+    }
+  }
+}

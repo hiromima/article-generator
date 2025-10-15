@@ -1,0 +1,154 @@
+{
+  "version": "1.0.0",
+  "created": "2025-10-15",
+  "purpose": "自律的自己改善の履歴を記録",
+  "improvements": [
+    {
+      "id": "IMP-001",
+      "date": "2025-10-15",
+      "trigger": "Failure F001 - API キー漏洩",
+      "severity": "critical",
+      "improvement": {
+        "title": "センシティブ情報検出ガードの作成",
+        "description": "ユーザーがセンシティブ情報をチャットに貼り付けるのを予防するガイドを作成",
+        "files": [
+          ".claude/self-improvement/sensitive-info-guard.md"
+        ],
+        "impact": "今後、同様のセキュリティインシデントを防ぐ",
+        "status": "implemented"
+      },
+      "verification": {
+        "method": "次回センシティブ情報が必要なタスクで検証",
+        "expected": "ユーザー入力前に警告を送信",
+        "actual": "未検証"
+      }
+    },
+    {
+      "id": "IMP-002",
+      "date": "2025-10-15",
+      "trigger": "Failures F002-F008 - 複数の失敗パターン",
+      "severity": "high",
+      "improvement": {
+        "title": "タスク実行前チェックリストの作成",
+        "description": "タスク実行前に必ず確認すべき5つの Phase（調査、コスト、セキュリティ、実装、コミュニケーション）を標準化",
+        "files": [
+          ".claude/self-improvement/pre-task-checklist.md"
+        ],
+        "impact": "事前調査不足、コスト説明不足、段階的実装の欠如を防ぐ",
+        "status": "implemented"
+      },
+      "verification": {
+        "method": "次回タスクで Phase 1-5 をすべて実行",
+        "expected": "試行回数が 3-5回 → 1-2回 に削減",
+        "actual": "未検証"
+      }
+    },
+    {
+      "id": "IMP-003",
+      "date": "2025-10-15",
+      "trigger": "過去の失敗を繰り返すリスク",
+      "severity": "high",
+      "improvement": {
+        "title": "失敗データベースの構築",
+        "description": "全ての失敗を構造化して記録し、類似のタスクで参照できるようにする",
+        "files": [
+          ".claude/self-improvement/failure-database.json"
+        ],
+        "impact": "過去の失敗から学習し、同じ失敗を繰り返さない",
+        "status": "implemented"
+      },
+      "verification": {
+        "method": "次回セッション開始時に failure-database.json を確認",
+        "expected": "類似タスクで過去の失敗を回避",
+        "actual": "未検証"
+      }
+    },
+    {
+      "id": "IMP-004",
+      "date": "2025-10-15",
+      "trigger": "メトリクスによる継続的改善の必要性",
+      "severity": "medium",
+      "improvement": {
+        "title": "セッションメトリクスの導入",
+        "description": "試行回数、成功率、セキュリティインシデント等を測定し、改善効果を定量的に評価",
+        "files": [
+          ".claude/self-improvement/session-metrics.json"
+        ],
+        "impact": "改善の効果を測定し、さらなる改善につなげる",
+        "status": "implemented"
+      },
+      "verification": {
+        "method": "次回セッション終了時にメトリクスを更新",
+        "expected": "ベースラインから改善が見られる",
+        "actual": "未検証"
+      }
+    },
+    {
+      "id": "IMP-005",
+      "date": "2025-10-15",
+      "trigger": "ユーザーからの要求「自律的に自己改善」",
+      "severity": "high",
+      "improvement": {
+        "title": "自律的自己改善システムの構築",
+        "description": "失敗データベース、チェックリスト、ガード、メトリクスを統合した自己改善システムを構築",
+        "files": [
+          ".claude/self-improvement/README.md",
+          ".claude/self-improvement/failure-database.json",
+          ".claude/self-improvement/pre-task-checklist.md",
+          ".claude/self-improvement/sensitive-info-guard.md",
+          ".claude/self-improvement/session-metrics.json",
+          ".claude/self-improvement/improvement-log.json"
+        ],
+        "impact": "次回セッションから自律的に過去の失敗を回避",
+        "status": "implemented"
+      },
+      "verification": {
+        "method": "次回セッションで全ファイルを参照して実行",
+        "expected": "チェックリスト準拠率 100%、セキュリティインシデント 0件",
+        "actual": "未検証"
+      }
+    }
+  ],
+  "upcomingImprovements": [
+    {
+      "id": "IMP-006",
+      "status": "planned",
+      "title": "自動チェック機構の実装",
+      "description": "タスク実行前に自動的にチェックリストを実行する機構",
+      "priority": "high",
+      "estimatedEffort": "medium"
+    },
+    {
+      "id": "IMP-007",
+      "status": "planned",
+      "title": "進捗報告の自動化",
+      "description": "定期的に進捗を自動報告する機構",
+      "priority": "medium",
+      "estimatedEffort": "low"
+    },
+    {
+      "id": "IMP-008",
+      "status": "planned",
+      "title": "失敗予測システム",
+      "description": "タスクの特徴から過去の類似失敗を予測し、警告する",
+      "priority": "high",
+      "estimatedEffort": "high"
+    }
+  ],
+  "statistics": {
+    "totalImprovements": 5,
+    "implemented": 5,
+    "planned": 3,
+    "verified": 0,
+    "effectiveness": "未検証"
+  },
+  "nextReview": {
+    "date": "次回セッション終了時",
+    "focus": [
+      "IMP-001 の検証（センシティブ情報の取り扱い）",
+      "IMP-002 の検証（チェックリストの効果）",
+      "IMP-003 の検証（失敗データベースの活用）",
+      "IMP-004 の検証（メトリクスの改善）"
+    ]
+  }
+}
