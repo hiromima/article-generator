@@ -71,6 +71,29 @@ npm test
 - 💻 **コード生成**: Issue から自動的にコードと テストを生成
 - 🤖 **オンデマンドサポート**: `@gemini-cli` でいつでも AI アシスタントを呼び出し
 
+### 🔧 Self-Healing Agent
+
+**ワークフロー障害を自動修復する自律型 Agent**
+
+Self-Healing Agent は GitHub Actions ワークフローの失敗を検知し、AI を活用して自動的に修復します。
+
+**主な機能**:
+- 🚨 **自動エラー検知**: ワークフロー失敗時に自動起動
+- 🔍 **AI エラー分析**: Gemini がログとコードを分析
+- 🛠️ **自動修復**: 修復コードを生成し PR を自動作成
+- ✅ **自動マージ**: テスト通過後に自動マージ
+- 📊 **Issue 自動管理**: 失敗検知から完了まで自動追跡
+
+**監視対象ワークフロー**:
+- Test Self-Healing Agent
+- Gemini CLI - AI Code Assistant
+- Webhook Event Handler
+- Autonomous Agent Execution
+- State Machine Automation
+- Economic Circuit Breaker
+
+詳細: [docs/self-healing/README.md](./docs/self-healing/README.md)
+
 ## 📋 npm scripts
 
 ```bash
