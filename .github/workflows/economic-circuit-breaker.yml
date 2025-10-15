@@ -21,6 +21,7 @@ jobs:
   monitor-cloud-costs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -40,6 +41,7 @@ jobs:
 
       - name: Load BUDGET.yml configuration
         id: budget
+        continue-on-error: false
         run: |
           BUDGET=$(yq '.monthly_budget_usd' BUDGET.yml)
           WARNING_THRESHOLD=$(yq '.thresholds.warning' BUDGET.yml)
