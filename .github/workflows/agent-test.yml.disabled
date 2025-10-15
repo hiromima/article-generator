@@ -1,0 +1,90 @@
+name: TestAgent - Automated Testing
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number for test results'
+        required: false
+        type: number
+      pattern:
+        description: 'Test pattern'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  run-tests:
+    name: Run Tests with Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TestAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -n "${{ inputs.pr_number }}" ]; then
+            echo "🧪 Running tests for PR #${{ inputs.pr_number }}"
+            npm run test:agent -- --pr ${{ inputs.pr_number }}
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            echo "🧪 Running tests for PR #${{ github.event.pull_request.number }}"
+            npm run test:agent -- --pr ${{ github.event.pull_request.number }}
+          else
+            echo "🧪 Running all tests"
+            npm run test:agent
+          fi
+
+      - name: Check coverage
+        id: check_coverage
+        run: |
+          RESULT=$(cat .ai/test-*.json | jq -r '.coverage.meetsThreshold')
+          echo "passed=${RESULT}" >> $GITHUB_OUTPUT
+
+          if [ "${RESULT}" = "true" ]; then
+            echo "✅ Coverage meets 80% threshold"
+          else
+            echo "❌ Coverage below 80% threshold"
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .ai/test-*.json
+          retention-days: 30
+
+      - name: Fail if coverage below threshold
+        if: steps.check_coverage.outputs.passed == 'false'
+        run: |
+          echo "❌ Test coverage below 80% threshold"
+          exit 1

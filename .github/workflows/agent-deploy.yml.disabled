@@ -1,0 +1,102 @@
+name: DeploymentAgent - Automated Deployment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      health_check_url:
+        description: 'Health check URL'
+        required: false
+        type: string
+      pr_number:
+        description: 'PR number for deployment comment'
+        required: false
+        type: number
+      no_rollback:
+        description: 'Disable automatic rollback'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    name: Deploy to Firebase
+    runs-on: ubuntu-latest
+
+    # Only deploy on push to main or when PR is merged
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run DeploymentAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.health_check_url }}" ]; then
+            ARGS="${ARGS} --health-check ${{ inputs.health_check_url }}"
+          fi
+
+          if [ -n "${{ inputs.pr_number }}" ]; then
+            ARGS="${ARGS} --pr ${{ inputs.pr_number }}"
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            ARGS="${ARGS} --pr ${{ github.event.pull_request.number }}"
+          fi
+
+          if [ "${{ inputs.no_rollback }}" = "true" ]; then
+            ARGS="${ARGS} --no-rollback"
+          fi
+
+          echo "🚀 Starting deployment"
+          npm run deploy -- ${ARGS}
+
+      - name: Check deployment status
+        id: check_deploy
+        run: |
+          SUCCESS=$(cat .ai/deployment-*.json | jq -r '.success')
+          echo "success=${SUCCESS}" >> $GITHUB_OUTPUT
+
+          if [ "${SUCCESS}" = "true" ]; then
+            echo "✅ Deployment successful"
+          else
+            echo "❌ Deployment failed"
+          fi
+
+      - name: Upload deployment artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-result
+          path: .ai/deployment-*.json
+          retention-days: 30
+
+      - name: Fail if deployment failed
+        if: steps.check_deploy.outputs.success == 'false'
+        run: |
+          echo "❌ Deployment failed"
+          exit 1

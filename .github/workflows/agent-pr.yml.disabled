@@ -1,0 +1,90 @@
+name: PRAgent - Pull Request Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Related issue number'
+        required: false
+        type: number
+      branch:
+        description: 'Source branch'
+        required: false
+        type: string
+      base_branch:
+        description: 'Target branch (default: main)'
+        required: false
+        type: string
+        default: 'main'
+      ready:
+        description: 'Create as ready for review (not draft)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    name: Create Pull Request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run PRAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.issue_number }}" ]; then
+            ARGS="${ARGS} --issue ${{ inputs.issue_number }}"
+          fi
+
+          if [ -n "${{ inputs.branch }}" ]; then
+            ARGS="${ARGS} --branch ${{ inputs.branch }}"
+          fi
+
+          if [ -n "${{ inputs.base_branch }}" ]; then
+            ARGS="${ARGS} --base ${{ inputs.base_branch }}"
+          fi
+
+          if [ "${{ inputs.ready }}" = "true" ]; then
+            ARGS="${ARGS} --ready"
+          fi
+
+          echo "🔀 Creating Pull Request"
+          npm run pr:create -- ${ARGS}
+
+      - name: Get PR number
+        id: get_pr
+        run: |
+          PR_NUM=$(cat .ai/pr-*.json | jq -r '.prNumber')
+          echo "pr_number=${PR_NUM}" >> $GITHUB_OUTPUT
+          echo "✅ Created PR #${PR_NUM}"
+
+      - name: Upload PR artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-result-${{ steps.get_pr.outputs.pr_number }}
+          path: .ai/pr-*.json
+          retention-days: 30

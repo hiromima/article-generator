@@ -1,0 +1,236 @@
+name: Miyabi Agent Pipeline - Full Automation
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # Step 1: Analyze task with CoordinatorAgent
+  coordinate:
+    name: 1️⃣ Coordinate Task
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issues' && contains(join(github.event.issue.labels.*.name, ','), 'agent:pipeline')) ||
+      github.event_name == 'workflow_dispatch'
+
+    outputs:
+      should_continue: ${{ steps.check.outputs.continue }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run CoordinatorAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ISSUE_NUM=${{ github.event.issue.number || inputs.issue_number }}
+          npm run coordinator:analyze -- --issue ${ISSUE_NUM}
+
+      - name: Check if should continue
+        id: check
+        run: echo "continue=true" >> $GITHUB_OUTPUT
+
+  # Step 2: Generate code with CodeGenAgent
+  generate-code:
+    name: 2️⃣ Generate Code
+    runs-on: ubuntu-latest
+    needs: coordinate
+    if: needs.coordinate.outputs.should_continue == 'true'
+
+    outputs:
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run CodeGenAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ISSUE_NUM=${{ github.event.issue.number || inputs.issue_number }}
+          npm run codegen:generate -- --issue ${ISSUE_NUM}
+
+      - name: Run TypeScript check
+        run: npm run typecheck
+
+      - name: Create PR with PRAgent
+        id: create_pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ISSUE_NUM=${{ github.event.issue.number || inputs.issue_number }}
+          npm run pr:create -- --issue ${ISSUE_NUM}
+          PR_NUM=$(cat .ai/pr-*.json | jq -r '.prNumber')
+          echo "pr_number=${PR_NUM}" >> $GITHUB_OUTPUT
+
+  # Step 3: Review code with ReviewAgent
+  review-code:
+    name: 3️⃣ Review Code
+    runs-on: ubuntu-latest
+    needs: generate-code
+    if: needs.generate-code.outputs.pr_number != ''
+
+    outputs:
+      review_passed: ${{ steps.review.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ReviewAgent
+        id: review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          PR_NUM=${{ needs.generate-code.outputs.pr_number }}
+          npm run review -- --pr ${PR_NUM}
+          SCORE=$(cat .ai/review-*.json | jq -r '.score')
+          if [ "${SCORE}" -ge 80 ]; then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Step 4: Run tests with TestAgent
+  run-tests:
+    name: 4️⃣ Run Tests
+    runs-on: ubuntu-latest
+    needs: [generate-code, review-code]
+    if: needs.review-code.outputs.review_passed == 'true'
+
+    outputs:
+      tests_passed: ${{ steps.test.outputs.passed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TestAgent
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          PR_NUM=${{ needs.generate-code.outputs.pr_number }}
+          npm run test:agent -- --pr ${PR_NUM}
+          COVERAGE=$(cat .ai/test-*.json | jq -r '.coverage.meetsThreshold')
+          echo "passed=${COVERAGE}" >> $GITHUB_OUTPUT
+
+  # Step 5: Deploy with DeploymentAgent (only on main)
+  deploy:
+    name: 5️⃣ Deploy
+    runs-on: ubuntu-latest
+    needs: [generate-code, review-code, run-tests]
+    if: |
+      needs.review-code.outputs.review_passed == 'true' &&
+      needs.run-tests.outputs.tests_passed == 'true' &&
+      github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run DeploymentAgent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          PR_NUM=${{ needs.generate-code.outputs.pr_number }}
+          npm run deploy -- --pr ${PR_NUM}
+
+  # Summary
+  pipeline-summary:
+    name: 📊 Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [coordinate, generate-code, review-code, run-tests, deploy]
+    if: always()
+
+    steps:
+      - name: Post summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNum = ${{ github.event.issue.number || inputs.issue_number }};
+
+            let body = `## 🤖 Miyabi Agent Pipeline Complete\n\n`;
+            body += `**Issue**: #${issueNum}\n\n`;
+            body += `### Pipeline Steps\n\n`;
+            body += `1️⃣ Coordination: ${{ needs.coordinate.result }}\n`;
+            body += `2️⃣ Code Generation: ${{ needs.generate-code.result }}\n`;
+            body += `3️⃣ Code Review: ${{ needs.review-code.result }}\n`;
+            body += `4️⃣ Testing: ${{ needs.run-tests.result }}\n`;
+            body += `5️⃣ Deployment: ${{ needs.deploy.result }}\n\n`;
+            body += `---\n🌸 Miyabi Framework - Autonomous Development`;
+
+            github.rest.issues.createComment({
+              issue_number: issueNum,
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              body: body
+            });
