@@ -75,29 +75,39 @@ jobs:
         id: create-issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ steps.get-logs.outputs.logs_url }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER: ${{ github.event.workflow_run.event }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
+          ERROR_SUMMARY: ${{ steps.get-logs.outputs.error_summary }}
+          WORKFLOW_FILE: ${{ steps.get-workflow.outputs.workflow_file }}
+          WORKFLOW_EXISTS: ${{ steps.get-workflow.outputs.workflow_exists }}
         run: |
-          # Create issue body file
-          cat > /tmp/issue_body.md <<'EOF'
+          # Create issue body using environment variables
+          cat > /tmp/issue_body.md << EOF
           ## ワークフローエラー検出
 
-          **ワークフロー**: `${{ github.event.workflow_run.name }}`
-          **Run ID**: `${{ github.event.workflow_run.id }}`
-          **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
-          **Branch**: `${{ github.event.workflow_run.head_branch }}`
-          **Commit**: `${{ github.event.workflow_run.head_sha }}`
-          **トリガー**: `${{ github.event.workflow_run.event }}`
-          **実行者**: @${{ github.event.workflow_run.actor.login }}
+          **ワークフロー**: \`${WORKFLOW_NAME}\`
+          **Run ID**: \`${RUN_ID}\`
+          **Run URL**: ${RUN_URL}
+          **Branch**: \`${BRANCH}\`
+          **Commit**: \`${COMMIT}\`
+          **トリガー**: \`${TRIGGER}\`
+          **実行者**: @${ACTOR}
 
           ### エラー概要
 
-          ```json
-          ${{ steps.get-logs.outputs.error_summary }}
-          ```
+          \`\`\`json
+          ${ERROR_SUMMARY}
+          \`\`\`
 
           ### ワークフローファイル
 
-          - **Path**: `${{ steps.get-workflow.outputs.workflow_file }}`
-          - **Exists**: `${{ steps.get-workflow.outputs.workflow_exists }}`
+          - **Path**: \`${WORKFLOW_FILE}\`
+          - **Exists**: \`${WORKFLOW_EXISTS}\`
 
           ---
 
@@ -106,11 +116,11 @@ jobs:
           このIssueは自動でクローズされます。
           EOF
 
-          # Create issue (without labels for now, will be added via gh CLI if they exist)
+          # Create issue
           ISSUE_URL=$(gh issue create \
-            --title "🚨 Self-Healing: ${{ github.event.workflow_run.name }} failure" \
+            --title "🚨 Self-Healing: ${WORKFLOW_NAME} failure" \
             --body-file /tmp/issue_body.md \
-            --assignee "${{ github.event.workflow_run.actor.login }}")
+            --assignee "${ACTOR}")
 
           ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
           echo "issue-number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
