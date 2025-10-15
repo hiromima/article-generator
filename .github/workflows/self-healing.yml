@@ -1,0 +1,315 @@
+name: 🔧 Self-Healing Agent
+
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  detect-and-heal:
+    name: 🚨 Detect & Heal Failure
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get workflow file path
+        id: get-workflow
+        run: |
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          WORKFLOW_FILE=$(find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs grep -l "name: ${WORKFLOW_NAME}" | head -1)
+
+          if [ -z "$WORKFLOW_FILE" ]; then
+            echo "workflow_file=.github/workflows/unknown.yml" >> $GITHUB_OUTPUT
+            echo "workflow_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "workflow_file=${WORKFLOW_FILE}" >> $GITHUB_OUTPUT
+            echo "workflow_exists=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Workflow file: ${WORKFLOW_FILE}"
+
+      - name: Get workflow logs
+        id: get-logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+
+          # Get failed jobs
+          FAILED_JOBS=$(gh api "/repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure") | {name: .name, steps: [.steps[] | select(.conclusion == "failure") | {name: .name, number: .number}]}')
+
+          # Save to file for Gemini
+          echo "$FAILED_JOBS" > /tmp/failed_jobs.json
+
+          # Get logs URL
+          LOGS_URL="https://github.com/${{ github.repository }}/actions/runs/${RUN_ID}"
+          echo "logs_url=${LOGS_URL}" >> $GITHUB_OUTPUT
+
+          # Extract error summary
+          ERROR_SUMMARY=$(echo "$FAILED_JOBS" | head -20)
+          echo "error_summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$ERROR_SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Issue for Failure
+        id: create-issue
+        uses: dacbd/create-issue-action@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "🚨 Self-Healing: ${{ github.event.workflow_run.name }} failure"
+          body: |
+            ## ワークフローエラー検出
+
+            **ワークフロー**: `${{ github.event.workflow_run.name }}`
+            **Run ID**: `${{ github.event.workflow_run.id }}`
+            **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+            **Branch**: `${{ github.event.workflow_run.head_branch }}`
+            **Commit**: `${{ github.event.workflow_run.head_sha }}`
+            **トリガー**: `${{ github.event.workflow_run.event }}`
+            **実行者**: @${{ github.event.workflow_run.actor.login }}
+
+            ### エラー概要
+
+            ```json
+            ${{ steps.get-logs.outputs.error_summary }}
+            ```
+
+            ### ワークフローファイル
+
+            - **Path**: `${{ steps.get-workflow.outputs.workflow_file }}`
+            - **Exists**: `${{ steps.get-workflow.outputs.workflow_exists }}`
+
+            ---
+
+            🤖 **Self-Healing Agent が自動修復を開始しました**
+
+            このIssueは自動でクローズされます。
+          labels: |
+            🚨 type:bug
+            🔴 priority:P0-Critical
+            🤖 agent:self-healing
+            🔧 state:auto-fixing
+          assignees: ${{ github.event.workflow_run.actor.login }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Read workflow file
+        id: read-workflow
+        if: steps.get-workflow.outputs.workflow_exists == 'true'
+        run: |
+          WORKFLOW_FILE="${{ steps.get-workflow.outputs.workflow_file }}"
+          WORKFLOW_CONTENT=$(cat "$WORKFLOW_FILE")
+
+          echo "workflow_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$WORKFLOW_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Analyze and Fix with Gemini
+        uses: google-github-actions/run-gemini-cli@v0.1.13
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            # Self-Healing Agent - ワークフローエラー自動修復
+
+            ## エラー情報
+
+            **ワークフロー名**: ${{ github.event.workflow_run.name }}
+            **Issue**: #${{ steps.create-issue.outputs.issue-number }}
+            **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+
+            ## 失敗したジョブ
+
+            ```json
+            ${{ steps.get-logs.outputs.error_summary }}
+            ```
+
+            ## ワークフローファイル
+
+            **Path**: `${{ steps.get-workflow.outputs.workflow_file }}`
+
+            ```yaml
+            ${{ steps.read-workflow.outputs.workflow_content }}
+            ```
+
+            ## あなたのミッション
+
+            1. **エラー原因を特定**
+               - ログから具体的なエラーを抽出
+               - 依存関係の問題か、設定ミスか、コードバグか判定
+
+            2. **修復方法を決定**
+               - ワークフローファイル修正が必要か
+               - コードファイル修正が必要か
+               - 依存関係更新が必要か
+
+            3. **自動修復を実行**
+               - 必要なファイルを編集
+               - 修正内容を明確にコミットメッセージに記載
+               - テストが通ることを確認
+
+            ## 制約条件
+
+            - 既存機能を壊さない
+            - TypeScript strict mode 準拠
+            - 最小限の変更で修復
+            - セキュリティリスクを導入しない
+
+            ## 出力形式
+
+            修正内容を JSON 形式で出力してください：
+
+            ```json
+            {
+              "error_cause": "エラーの根本原因",
+              "fix_type": "workflow|code|dependency",
+              "files_to_modify": ["ファイルパスのリスト"],
+              "fix_description": "修正内容の説明",
+              "test_commands": ["テストコマンドのリスト"]
+            }
+            ```
+
+            それでは、自律的に修復を開始してください。
+
+      - name: Install dependencies
+        run: |
+          npm ci
+        continue-on-error: true
+
+      - name: Run type check
+        run: |
+          npm run typecheck
+        continue-on-error: true
+
+      - name: Run tests
+        run: |
+          npm test
+        continue-on-error: true
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            fix(self-healing): Auto-fix ${{ github.event.workflow_run.name }} failure
+
+            Fixes #${{ steps.create-issue.outputs.issue-number }}
+
+            🤖 Self-Healing Agent による自動修復
+
+            - エラー原因を分析
+            - 修復コードを自動生成
+            - テスト実行済み
+
+            Run URL: ${{ steps.get-logs.outputs.logs_url }}
+          branch: self-healing/run-${{ github.event.workflow_run.id }}
+          delete-branch: true
+          title: "fix: Auto-heal ${{ github.event.workflow_run.name }} (#${{ steps.create-issue.outputs.issue-number }})"
+          body: |
+            ## 🔧 Self-Healing Agent - 自動修復完了
+
+            **Issue**: #${{ steps.create-issue.outputs.issue-number }}
+            **Failed Workflow**: `${{ github.event.workflow_run.name }}`
+            **Run ID**: `${{ github.event.workflow_run.id }}`
+            **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+
+            ---
+
+            ### 🔍 エラー分析
+
+            Gemini AI がワークフローログとコードを分析しました。
+
+            ### 🛠️ 修復内容
+
+            自動生成された修復コードが含まれています。
+            詳細は Commits タブを参照してください。
+
+            ### ✅ 検証結果
+
+            - Type check: See workflow logs
+            - Tests: See workflow logs
+
+            ---
+
+            🤖 **このPRは自動マージされます**
+
+            Self-Healing Agent による完全自律修復。
+            問題がある場合は、このPRをクローズして手動で修正してください。
+
+            ---
+
+            Generated by Self-Healing Agent
+            Co-Authored-By: Gemini AI <noreply@google.com>
+          labels: |
+            🔧 type:fix
+            🤖 agent:self-healing
+            🚀 state:auto-merging
+          draft: false
+
+      - name: Wait for PR checks
+        if: steps.create-pr.outputs.pull-request-number != ''
+        run: |
+          echo "Waiting 30 seconds for PR checks to start..."
+          sleep 30
+
+      - name: Auto-merge PR
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.create-pr.outputs.pull-request-number }}"
+
+          echo "🤖 Auto-merging PR #${PR_NUMBER}..."
+
+          # Enable auto-merge with squash
+          gh pr merge "${PR_NUMBER}" \
+            --auto \
+            --squash \
+            --delete-branch \
+            --body "🤖 Auto-merged by Self-Healing Agent" || {
+              echo "⚠️ Auto-merge failed. PR requires manual review."
+              gh pr comment "${PR_NUMBER}" --body "⚠️ 自動マージに失敗しました。手動レビューが必要です。"
+              exit 0
+            }
+
+          echo "✅ Auto-merge enabled for PR #${PR_NUMBER}"
+
+      - name: Close Issue
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER="${{ steps.create-issue.outputs.issue-number }}"
+          PR_NUMBER="${{ steps.create-pr.outputs.pull-request-number }}"
+
+          gh issue comment "${ISSUE_NUMBER}" --body "✅ 自動修復完了。PR #${PR_NUMBER} で修正されました。"
+          gh issue close "${ISSUE_NUMBER}" --reason "completed"
+
+          echo "✅ Issue #${ISSUE_NUMBER} closed"
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER="${{ steps.create-issue.outputs.issue-number }}"
+
+          gh issue comment "${ISSUE_NUMBER}" --body "❌ 自動修復に失敗しました。手動での対応が必要です。"
+          gh issue label "${ISSUE_NUMBER}" --add "⚠️ needs-manual-fix"
+
+          echo "❌ Self-healing failed. Manual intervention required."

@@ -1,0 +1,36 @@
+name: Test Self-Healing Agent
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test-self-healing
+
+permissions:
+  contents: read
+
+jobs:
+  intentional-failure:
+    name: 🧪 Intentional Failure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Intentional Error - Missing dependency
+        run: |
+          echo "🧪 Testing Self-Healing Agent..."
+          echo "This step will fail intentionally to trigger self-healing."
+
+          # Intentional error: wrong command
+          npm run nonexistent-script
+
+      - name: This step should not run
+        run: |
+          echo "If you see this, the workflow did not fail as expected."
