@@ -1,6 +1,7 @@
 name: 🔧 Self-Healing Agent
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - "Test Self-Healing Agent"
