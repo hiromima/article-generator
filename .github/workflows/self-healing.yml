@@ -606,16 +606,18 @@ jobs:
           echo "::warning::Self-healing process failed. Notifying issue #${ISSUE_NUMBER}"
 
           # Add failure comment with error handling
-          FAILURE_MESSAGE="❌ 自動修復に失敗しました。
+          cat > /tmp/failure_message.md << 'EOF'
+          ❌ 自動修復に失敗しました。
 
-**失敗したステップ**: 確認してください
-**ワークフロー**: ${{ github.workflow }}
-**Run ID**: ${{ github.run_id }}
-**Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **失敗したステップ**: 確認してください
+          **ワークフロー**: ${{ github.workflow }}
+          **Run ID**: ${{ github.run_id }}
+          **Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-手動での対応が必要です。"
+          手動での対応が必要です。
+          EOF
 
-          if gh issue comment "${ISSUE_NUMBER}" --body "$FAILURE_MESSAGE" 2>&1; then
+          if gh issue comment "${ISSUE_NUMBER}" --body-file /tmp/failure_message.md 2>&1; then
             echo "::notice::Failure notification added to issue #${ISSUE_NUMBER}"
           else
             echo "::error::Failed to add failure notification to issue"
