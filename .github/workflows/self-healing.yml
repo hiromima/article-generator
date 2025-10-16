@@ -45,6 +45,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
 
     steps:
+      - name: Record start time
+        id: start-time
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -572,6 +576,19 @@ jobs:
             exit 1
           fi
 
+      - name: Record success metrics
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          END_TIME=$(date +%s)
+          bash scripts/self-healing/record-metrics.sh \
+            "${{ steps.create-issue.outputs.issue-number }}" \
+            "success" \
+            "${{ steps.start-time.outputs.start }}" \
+            "${END_TIME}" \
+            "${{ github.event.workflow_run.name }}"
+
       - name: Notify on failure
         if: failure()
         env:
@@ -603,3 +620,16 @@ jobs:
           else
             echo "::error::Failed to add failure notification to issue"
           fi
+
+      - name: Record failure metrics
+        if: failure() && steps.create-issue.outputs.issue-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          END_TIME=$(date +%s)
+          bash scripts/self-healing/record-metrics.sh \
+            "${{ steps.create-issue.outputs.issue-number }}" \
+            "failure" \
+            "${{ steps.start-time.outputs.start }}" \
+            "${END_TIME}" \
+            "${{ github.event.workflow_run.name }}" || true

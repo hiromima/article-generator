@@ -1,0 +1,71 @@
+# Self-Healing Dashboard
+# Purpose: Generate metrics dashboard for Self-Healing Agent
+# Triggers: Daily schedule and manual dispatch
+
+name: 📊 Self-Healing Dashboard
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Number of days to analyze'
+        required: false
+        default: '30'
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  generate-dashboard:
+    name: 📈 Generate Dashboard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate dashboard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DAYS="${{ github.event.inputs.days || '30' }}"
+          bash scripts/self-healing/generate-dashboard.sh "${DAYS}" > dashboard.md
+
+      - name: Display dashboard
+        run: cat dashboard.md
+
+      - name: Upload dashboard as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-healing-dashboard
+          path: dashboard.md
+          retention-days: 90
+
+      - name: Create dashboard issue (monthly)
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MONTH=$(date '+%Y-%m')
+          TITLE="📊 Self-Healing Dashboard - ${MONTH}"
+
+          # Check if issue already exists
+          EXISTING=$(gh issue list \
+            --search "${TITLE} in:title" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number' || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::Dashboard issue already exists: #${EXISTING}"
+            gh issue comment "${EXISTING}" --body-file dashboard.md
+          else
+            gh issue create \
+              --title "${TITLE}" \
+              --body-file dashboard.md \
+              --label "📊 monitoring"
+          fi
