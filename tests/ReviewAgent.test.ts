@@ -1,5 +1,15 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { ReviewAgent } from '../src/agents/ReviewAgent';
+
+// Mock @octokit/rest to avoid ESM issues
+jest.mock('@octokit/rest', () => ({
+  Octokit: jest.fn().mockImplementation(() => ({
+    issues: {
+      createComment: jest.fn()
+    },
+    rest: {}
+  }))
+}));
 
 describe('ReviewAgent', () => {
   let agent: ReviewAgent;

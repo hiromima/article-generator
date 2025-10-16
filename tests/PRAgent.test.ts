@@ -1,5 +1,17 @@
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect, jest } from '@jest/globals';
 import { PRAgent } from '../src/agents/PRAgent';
+
+// Mock @octokit/rest to avoid ESM issues
+jest.mock('@octokit/rest', () => ({
+  Octokit: jest.fn().mockImplementation(() => ({
+    pulls: {
+      create: jest.fn(),
+      update: jest.fn(),
+      requestReviewers: jest.fn()
+    },
+    rest: {}
+  }))
+}));
 
 describe('PRAgent', () => {
   describe('初期化', () => {

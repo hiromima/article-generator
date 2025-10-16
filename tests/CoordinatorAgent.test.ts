@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { CoordinatorAgent, Task, Wave } from '../src/agents/CoordinatorAgent';
+import { CoordinatorAgent, Task } from '../src/agents/CoordinatorAgent';
 
 describe('CoordinatorAgent', () => {
   let agent: CoordinatorAgent;
