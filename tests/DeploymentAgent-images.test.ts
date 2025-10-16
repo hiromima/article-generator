@@ -110,6 +110,8 @@ describe('DeploymentAgent - Image Generation', () => {
       // 画像が生成されている
       expect(result.generatedImages).toBeDefined();
       expect(result.generatedImages).toHaveLength(3); // アイキャッチ + 2セクション
+      // 画像生成成功として扱う
+      expect(result.success).toBe(true);
     }, 40000);
 
     test('postToNote に画像を指定した場合は再生成されない', async () => {
@@ -133,6 +135,8 @@ describe('DeploymentAgent - Image Generation', () => {
 
       // 指定した画像がそのまま使用される
       expect(result.generatedImages).toEqual(preGeneratedImages);
+      // 画像生成成功として扱う
+      expect(result.success).toBe(true);
     }, 30000);
   });
 
@@ -203,6 +207,8 @@ describe('DeploymentAgent - Image Generation', () => {
       expect(result.generatedImages).toBeDefined();
       // アイキャッチのみ
       expect(result.generatedImages).toHaveLength(1);
+      // 画像生成成功として扱う
+      expect(result.success).toBe(true);
     }, 30000);
   });
 
