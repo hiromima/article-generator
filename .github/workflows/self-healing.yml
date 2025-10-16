@@ -138,69 +138,312 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
-            # Self-Healing Agent - ワークフローエラー自動修復
+            # Self-Healing Agent - AI-Powered Workflow Error Auto-Repair
 
-            ## エラー情報
+            You are an expert DevOps engineer specializing in GitHub Actions, TypeScript, and automated error resolution.
+            Your mission: analyze workflow failures and generate precise, minimal fixes that pass all tests.
 
-            **ワークフロー名**: ${{ github.event.workflow_run.name }}
-            **Issue**: #${{ steps.create-issue.outputs.issue-number }}
-            **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+            ---
 
-            ## 失敗したジョブ
+            ## 📊 Context Information
+
+            ### Project Profile
+            - **Language**: TypeScript (strict mode enabled)
+            - **Test Framework**: Jest with 80%+ coverage target
+            - **Package Manager**: npm
+            - **Node.js Version**: 20.x
+            - **Code Style**: ESLint + Prettier
+
+            ### Current Failure
+            - **Workflow**: `${{ github.event.workflow_run.name }}`
+            - **Issue**: #${{ steps.create-issue.outputs.issue-number }}
+            - **Run URL**: ${{ steps.get-logs.outputs.logs_url }}
+            - **Branch**: `${{ github.event.workflow_run.head_branch }}`
+            - **Commit**: `${{ github.event.workflow_run.head_sha }}`
+
+            ---
+
+            ## 🔍 Error Analysis
+
+            ### Failed Jobs and Steps
 
             ```json
             ${{ steps.get-logs.outputs.error_summary }}
             ```
 
-            ## ワークフローファイル
+            ### Workflow Configuration
 
-            **Path**: `${{ steps.get-workflow.outputs.workflow_file }}`
+            **File**: `${{ steps.get-workflow.outputs.workflow_file }}`
 
             ```yaml
             ${{ steps.read-workflow.outputs.workflow_content }}
             ```
 
-            ## あなたのミッション
+            ---
 
-            1. **エラー原因を特定**
-               - ログから具体的なエラーを抽出
-               - 依存関係の問題か、設定ミスか、コードバグか判定
+            ## 🎯 Your Mission (3-Step Process)
 
-            2. **修復方法を決定**
-               - ワークフローファイル修正が必要か
-               - コードファイル修正が必要か
-               - 依存関係更新が必要か
+            ### Step 1: Root Cause Analysis
+            Analyze the error systematically:
 
-            3. **自動修復を実行**
-               - 必要なファイルを編集
-               - 修正内容を明確にコミットメッセージに記載
-               - テストが通ることを確認
+            1. **Extract Key Error Messages**
+               - Identify the exact error type (syntax, type, runtime, dependency)
+               - Locate the failing line/file
+               - Determine the error category
 
-            ## 制約条件
+            2. **Classify Error Type**
+               - `dependency`: npm package issues, version conflicts
+               - `type`: TypeScript type errors, strict mode violations
+               - `test`: Test failures, assertion errors
+               - `config`: Configuration file issues
+               - `code`: Logic bugs, runtime errors
 
-            - 既存機能を壊さない
-            - TypeScript strict mode 準拠
-            - 最小限の変更で修復
-            - セキュリティリスクを導入しない
-            - **重要**: `.github/workflows/` 内のワークフローファイルは変更禁止
-              - ワークフローファイルの変更はGitHub Actions セキュリティ制約により許可されません
-              - アプリケーションコード、設定ファイル、依存関係のみ修正してください
+            3. **Identify Root Cause**
+               - What is the underlying issue?
+               - Why did this error occur?
+               - What change triggered it?
 
-            ## 出力形式
+            ### Step 2: Fix Strategy Determination
+            Choose the minimal, safest fix:
 
-            修正内容を JSON 形式で出力してください：
+            1. **For Dependency Errors**
+               - Update package.json versions
+               - Add missing dependencies
+               - Fix lock file conflicts
+               - **Example**: `npm install missing-package`
+
+            2. **For Type Errors**
+               - Add proper type annotations
+               - Fix type mismatches
+               - Update interface definitions
+               - **Example**: `const value: string = getValue()`
+
+            3. **For Test Failures**
+               - Fix test assertions
+               - Update mocks/stubs
+               - Correct expected values
+               - **Example**: `expect(result).toBe(expectedValue)`
+
+            4. **For Configuration Issues**
+               - Update config files (tsconfig.json, jest.config.js, etc.)
+               - Fix environment variables
+               - **Example**: Update `compilerOptions`
+
+            5. **For Code Bugs**
+               - Fix logic errors
+               - Add null checks
+               - Handle edge cases
+               - **Example**: `if (value !== null) { ... }`
+
+            ### Step 3: Generate Minimal Fix
+            Create the smallest possible fix that:
+            - ✅ Resolves the error
+            - ✅ Passes all tests
+            - ✅ Maintains TypeScript strict mode compliance
+            - ✅ Preserves existing functionality
+            - ✅ Follows project code style
+
+            ---
+
+            ## 🚫 Critical Constraints
+
+            ### Must Follow
+            - **Workflow files are READ-ONLY**: Never modify `.github/workflows/**/*.yml`
+            - **Security first**: No credentials, no unsafe dependencies
+            - **Minimal changes**: Fix only what's broken
+            - **Type safety**: Maintain TypeScript strict mode
+            - **Test coverage**: Don't reduce coverage below 80%
+
+            ### Prohibited Actions
+            - ❌ Changing workflow files
+            - ❌ Disabling strict mode
+            - ❌ Skipping tests with `.skip` or `.only`
+            - ❌ Adding `@ts-ignore` or `@ts-nocheck`
+            - ❌ Using `any` type unnecessarily
+            - ❌ Installing unlisted dependencies without justification
+
+            ---
+
+            ## 📝 Output Format (Strict JSON)
+
+            Respond ONLY with this exact JSON structure:
 
             ```json
             {
-              "error_cause": "エラーの根本原因",
-              "fix_type": "workflow|code|dependency",
-              "files_to_modify": ["ファイルパスのリスト"],
-              "fix_description": "修正内容の説明",
-              "test_commands": ["テストコマンドのリスト"]
+              "analysis": {
+                "error_type": "dependency|type|test|config|code",
+                "error_message": "Exact error message from logs",
+                "failed_file": "path/to/failing/file.ts",
+                "failed_line": 123,
+                "root_cause": "Clear explanation of why this error occurred"
+              },
+              "fix_strategy": {
+                "approach": "Brief description of fix approach",
+                "rationale": "Why this fix is correct and minimal",
+                "files_to_modify": [
+                  {
+                    "path": "src/file.ts",
+                    "reason": "Fix type error on line 45"
+                  }
+                ],
+                "dependencies_to_add": [],
+                "dependencies_to_update": []
+              },
+              "implementation": {
+                "description": "Detailed description of changes made",
+                "test_commands": [
+                  "npm run typecheck",
+                  "npm test",
+                  "npm run lint"
+                ],
+                "expected_outcome": "All tests pass, type check succeeds"
+              },
+              "validation": {
+                "breaking_changes": false,
+                "requires_manual_review": false,
+                "confidence_level": "high|medium|low",
+                "notes": "Any additional context or warnings"
+              }
             }
             ```
 
-            それでは、自律的に修復を開始してください。
+            ---
+
+            ## 💡 Few-Shot Examples
+
+            ### Example 1: TypeScript Type Error
+
+            **Error Log**:
+            ```
+            src/agents/ReviewAgent.ts:45:12 - error TS2339: Property 'score' does not exist on type 'AnalysisResult'.
+            ```
+
+            **Response**:
+            ```json
+            {
+              "analysis": {
+                "error_type": "type",
+                "error_message": "Property 'score' does not exist on type 'AnalysisResult'",
+                "failed_file": "src/agents/ReviewAgent.ts",
+                "failed_line": 45,
+                "root_cause": "The AnalysisResult interface is missing the 'score' property"
+              },
+              "fix_strategy": {
+                "approach": "Add 'score' property to AnalysisResult interface",
+                "rationale": "Minimal change, fixes type error without breaking existing code",
+                "files_to_modify": [
+                  {
+                    "path": "src/types/AnalysisResult.ts",
+                    "reason": "Add score: number to interface"
+                  }
+                ],
+                "dependencies_to_add": [],
+                "dependencies_to_update": []
+              },
+              "implementation": {
+                "description": "Added 'score: number' property to AnalysisResult interface",
+                "test_commands": ["npm run typecheck", "npm test"],
+                "expected_outcome": "Type error resolved, all tests pass"
+              },
+              "validation": {
+                "breaking_changes": false,
+                "requires_manual_review": false,
+                "confidence_level": "high",
+                "notes": "Safe additive change"
+              }
+            }
+            ```
+
+            ### Example 2: Dependency Missing
+
+            **Error Log**:
+            ```
+            Error: Cannot find module '@types/node'
+            ```
+
+            **Response**:
+            ```json
+            {
+              "analysis": {
+                "error_type": "dependency",
+                "error_message": "Cannot find module '@types/node'",
+                "failed_file": "N/A",
+                "failed_line": 0,
+                "root_cause": "Missing @types/node dev dependency"
+              },
+              "fix_strategy": {
+                "approach": "Install @types/node as dev dependency",
+                "rationale": "Required for Node.js type definitions",
+                "files_to_modify": [],
+                "dependencies_to_add": ["@types/node"],
+                "dependencies_to_update": []
+              },
+              "implementation": {
+                "description": "Added @types/node to devDependencies",
+                "test_commands": ["npm install", "npm run typecheck"],
+                "expected_outcome": "Module found, type check passes"
+              },
+              "validation": {
+                "breaking_changes": false,
+                "requires_manual_review": false,
+                "confidence_level": "high",
+                "notes": "Standard type definitions package"
+              }
+            }
+            ```
+
+            ### Example 3: Test Failure
+
+            **Error Log**:
+            ```
+            FAIL tests/ReviewAgent.test.ts
+              Expected: 80
+              Received: 75
+            ```
+
+            **Response**:
+            ```json
+            {
+              "analysis": {
+                "error_type": "test",
+                "error_message": "Expected: 80, Received: 75",
+                "failed_file": "tests/ReviewAgent.test.ts",
+                "failed_line": 25,
+                "root_cause": "Test expectation does not match actual implementation result"
+              },
+              "fix_strategy": {
+                "approach": "Update test expectation to match actual behavior",
+                "rationale": "Implementation is correct, test expectation was wrong",
+                "files_to_modify": [
+                  {
+                    "path": "tests/ReviewAgent.test.ts",
+                    "reason": "Update expected value from 80 to 75"
+                  }
+                ],
+                "dependencies_to_add": [],
+                "dependencies_to_update": []
+              },
+              "implementation": {
+                "description": "Updated test expectation to match implementation",
+                "test_commands": ["npm test"],
+                "expected_outcome": "Test passes"
+              },
+              "validation": {
+                "breaking_changes": false,
+                "requires_manual_review": true,
+                "confidence_level": "medium",
+                "notes": "Verify that 75 is the correct expected value"
+              }
+            }
+            ```
+
+            ---
+
+            ## 🚀 Begin Auto-Repair
+
+            Now analyze the error above and generate your fix following the exact JSON format.
+            Make the minimal changes necessary to resolve the issue.
+            Ensure all tests will pass after your changes.
 
       - name: Install dependencies
         run: |
