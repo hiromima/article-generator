@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import 'dotenv/config';
+import { ArticleQualityScorer, type ArticleQualityScore } from './ArticleQualityScorer';
 
 const execAsync = promisify(exec);
 
@@ -499,6 +500,33 @@ export class ReviewAgent {
     });
 
     console.log(`✅ Review comment posted to PR #${prNumber}`);
+  }
+
+  /**
+   * 記事品質を評価
+   *
+   * @param articleContent - 記事コンテンツ（Markdown）
+   * @param keywords - SEOキーワード（オプション）
+   * @returns 記事品質スコア
+   */
+  async reviewArticle(articleContent: string, keywords: string[] = []): Promise<ArticleQualityScore> {
+    console.log('📊 Starting article quality review...');
+    console.log('');
+
+    const scorer = new ArticleQualityScorer(this.config.passingScore);
+    const score = await scorer.evaluateArticle(articleContent, keywords);
+
+    console.log('');
+    if (score.passed) {
+      console.log(`✅ Article PASSED review (${score.overall}/100)`);
+    } else {
+      console.log(`❌ Article FAILED review (${score.overall}/100)`);
+      console.log('');
+      console.log('📝 Feedback:');
+      score.feedback.forEach(f => console.log(`  - ${f}`));
+    }
+
+    return score;
   }
 
   /**

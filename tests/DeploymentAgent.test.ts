@@ -99,6 +99,33 @@ describe('DeploymentAgent', () => {
     });
   });
 
+  describe('note.com投稿機能', () => {
+    test('postToNote() メソッドが存在する', () => {
+      const agent = new DeploymentAgent({
+        notePostingEnabled: true
+      });
+      expect(typeof agent.postToNote).toBe('function');
+    });
+
+    test('note.com投稿が無効化されている場合はエラーを返す', async () => {
+      const agent = new DeploymentAgent({
+        notePostingEnabled: false
+      });
+      const result = await agent.postToNote('# Test Article', 'Test Title');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('not enabled');
+    });
+
+    test('note.com投稿が有効化されている場合はスタブを返す', async () => {
+      const agent = new DeploymentAgent({
+        notePostingEnabled: true
+      });
+      const result = await agent.postToNote('# Test Article', 'Test Title');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Not implemented');
+    });
+  });
+
   describe('受け入れ基準', () => {
     test('Firebase 自動デプロイ機能が実装されている', () => {
       const agent = new DeploymentAgent();
@@ -122,6 +149,13 @@ describe('DeploymentAgent', () => {
     test('PR コメント機能が実装されている', () => {
       const agent = new DeploymentAgent();
       expect(typeof agent.commentOnPR).toBe('function');
+    });
+
+    test('note.com投稿機能が実装されている（スタブ）', () => {
+      const agent = new DeploymentAgent({
+        notePostingEnabled: true
+      });
+      expect(typeof agent.postToNote).toBe('function');
     });
   });
 

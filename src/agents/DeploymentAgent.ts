@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import 'dotenv/config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const execAsync = promisify(exec);
 
@@ -15,6 +16,7 @@ export interface DeploymentConfig {
   rollbackOnFailure?: boolean;       // 失敗時の自動ロールバック（デフォルト: true）
   buildCommand?: string;             // ビルドコマンド（デフォルト: npm run build）
   deployCommand?: string;            // デプロイコマンド（デフォルト: firebase deploy）
+  notePostingEnabled?: boolean;      // note.com投稿有効化（デフォルト: false）
 }
 
 /**
@@ -29,6 +31,32 @@ export interface DeploymentResult {
   healthCheckPassed: boolean;
   healthCheckDetails?: HealthCheckResult;
   rollbackPerformed: boolean;
+  notePostResult?: NotePostResult;   // note.com投稿結果
+  error?: string;
+}
+
+/**
+ * note.com投稿結果
+ */
+export interface NotePostResult {
+  success: boolean;
+  noteUrl?: string;                  // 投稿されたnoteのURL
+  postTime: number;                  // 投稿時間（ms）
+  generatedImages?: GeneratedImage[]; // 生成された画像
+  error?: string;
+}
+
+/**
+ * 生成画像情報
+ */
+export interface GeneratedImage {
+  type: 'eyecatch' | 'section';      // 画像タイプ
+  prompt: string;                     // 生成プロンプト
+  url?: string;                       // 画像URL（ローカルパス）
+  base64Data?: string;                // Base64エンコード画像データ
+  sectionIndex?: number;              // セクションインデックス（section画像の場合）
+  generationTime: number;             // 生成時間（ms）
+  success: boolean;
   error?: string;
 }
 
@@ -70,6 +98,7 @@ export class DeploymentAgent {
   private owner: string;
   private repo: string;
   private config: Required<DeploymentConfig>;
+  private _genAI: GoogleGenerativeAI;  // 将来のGemini Image API統合用
 
   constructor(config: DeploymentConfig = {}) {
     const githubToken = process.env.GITHUB_TOKEN;
@@ -77,7 +106,13 @@ export class DeploymentAgent {
       throw new Error('GITHUB_TOKEN is required');
     }
 
+    const googleApiKey = process.env.GOOGLE_API_KEY;
+    if (!googleApiKey) {
+      throw new Error('GOOGLE_API_KEY is required for image generation');
+    }
+
     this.octokit = new Octokit({ auth: githubToken });
+    this._genAI = new GoogleGenerativeAI(googleApiKey);
 
     const repoInfo = process.env.GITHUB_REPOSITORY || 'hiromima/article-generator';
     [this.owner, this.repo] = repoInfo.split('/');
@@ -88,8 +123,370 @@ export class DeploymentAgent {
       healthCheckTimeout: config.healthCheckTimeout ?? 10000,
       rollbackOnFailure: config.rollbackOnFailure ?? true,
       buildCommand: config.buildCommand || 'npm run build',
-      deployCommand: config.deployCommand || 'firebase deploy --only hosting'
+      deployCommand: config.deployCommand || 'firebase deploy --only hosting',
+      notePostingEnabled: config.notePostingEnabled ?? false
     };
+  }
+
+  /**
+   * 記事から画像を生成（nano banana）
+   *
+   * @param articleContent - 記事コンテンツ（Markdown形式）
+   * @param title - 記事タイトル
+   * @returns 生成された画像配列
+   */
+  async generateArticleImages(articleContent: string, title: string): Promise<GeneratedImage[]> {
+    console.log('🎨 Generating images with Gemini 2.5 Flash (nano banana)...');
+    console.log('');
+
+    const images: GeneratedImage[] = [];
+
+    try {
+      // 1. アイキャッチ画像を生成
+      console.log('🖼️ Generating eyecatch image...');
+      const eyecatchImage = await this.generateEyecatchImage(title, articleContent);
+      images.push(eyecatchImage);
+
+      if (eyecatchImage.success) {
+        console.log(`✅ Eyecatch image generated in ${eyecatchImage.generationTime}ms`);
+      } else {
+        console.log(`❌ Eyecatch image generation failed: ${eyecatchImage.error}`);
+      }
+
+      // 2. セクション画像を生成
+      const sections = this.extractSections(articleContent);
+      console.log(`📝 Found ${sections.length} sections`);
+
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+        console.log(`🎨 Generating section ${i + 1}/${sections.length} image...`);
+
+        const sectionImage = await this.generateSectionImage(section, i);
+        images.push(sectionImage);
+
+        if (sectionImage.success) {
+          console.log(`✅ Section ${i + 1} image generated in ${sectionImage.generationTime}ms`);
+        } else {
+          console.log(`❌ Section ${i + 1} image generation failed: ${sectionImage.error}`);
+        }
+      }
+
+      const successCount = images.filter(img => img.success).length;
+      console.log('');
+      console.log(`🎨 Image generation complete: ${successCount}/${images.length} successful`);
+
+      return images;
+
+    } catch (error) {
+      console.error('❌ Image generation failed:', error instanceof Error ? error.message : String(error));
+      return images;
+    }
+  }
+
+  /**
+   * アイキャッチ画像を生成
+   *
+   * @param title - 記事タイトル
+   * @param articleContent - 記事コンテンツ
+   * @returns 生成画像情報
+   */
+  private async generateEyecatchImage(title: string, articleContent: string): Promise<GeneratedImage> {
+    const startTime = Date.now();
+
+    try {
+      // 記事の要約を生成してプロンプトに使用
+      const summary = this.summarizeArticle(articleContent);
+
+      const prompt = `Create a professional and eye-catching hero image for an article titled "${title}".
+The article is about: ${summary}
+
+Style: Modern, clean, professional
+Focus: Visual representation of the main concept
+Quality: High-resolution, suitable for article header
+Mood: Engaging and informative`;
+
+      // Gemini 2.5 Flash Image API を使用
+      const model = this._genAI.getGenerativeModel({
+        model: 'models/gemini-2.5-flash-image'
+      });
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      });
+
+      const response = result.response;
+      const generationTime = Date.now() - startTime;
+
+      // 画像データを取得
+      const candidates = response.candidates;
+      if (!candidates || candidates.length === 0) {
+        return {
+          type: 'eyecatch',
+          prompt,
+          generationTime,
+          success: false,
+          error: 'No candidates returned from Gemini Image API'
+        };
+      }
+
+      const parts = candidates[0].content?.parts;
+      if (!parts || parts.length === 0) {
+        return {
+          type: 'eyecatch',
+          prompt,
+          generationTime,
+          success: false,
+          error: 'No parts in response'
+        };
+      }
+
+      // 画像データを探す（base64またはinlineData形式）
+      const imagePart = parts.find((part: any) => part.inlineData || part.image);
+      if (!imagePart) {
+        return {
+          type: 'eyecatch',
+          prompt,
+          generationTime,
+          success: false,
+          error: 'No image data in response'
+        };
+      }
+
+      // Base64データを取得
+      const base64Data = (imagePart as any).inlineData?.data || (imagePart as any).image?.data;
+      if (!base64Data) {
+        return {
+          type: 'eyecatch',
+          prompt,
+          generationTime,
+          success: false,
+          error: 'Could not extract base64 data from image part'
+        };
+      }
+
+      return {
+        type: 'eyecatch',
+        prompt,
+        base64Data,
+        generationTime,
+        success: true
+      };
+
+    } catch (error) {
+      const generationTime = Date.now() - startTime;
+      return {
+        type: 'eyecatch',
+        prompt: `Eyecatch image for "${title}"`,
+        generationTime,
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * セクション画像を生成
+   *
+   * @param section - セクション情報
+   * @param index - セクションインデックス
+   * @returns 生成画像情報
+   */
+  private async generateSectionImage(section: { title: string; content: string }, index: number): Promise<GeneratedImage> {
+    const startTime = Date.now();
+
+    try {
+      const prompt = `Create an illustrative image for a section titled "${section.title}".
+Content summary: ${section.content.substring(0, 200)}...
+
+Style: Modern, clean, relevant to the content
+Focus: Visual support for the section content
+Quality: High-resolution, suitable for inline article image
+Mood: Educational and professional`;
+
+      // Gemini 2.5 Flash Image API を使用
+      const model = this._genAI.getGenerativeModel({
+        model: 'models/gemini-2.5-flash-image'
+      });
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      });
+
+      const response = result.response;
+      const generationTime = Date.now() - startTime;
+
+      // 画像データを取得
+      const candidates = response.candidates;
+      if (!candidates || candidates.length === 0) {
+        return {
+          type: 'section',
+          prompt,
+          sectionIndex: index,
+          generationTime,
+          success: false,
+          error: 'No candidates returned from Gemini Image API'
+        };
+      }
+
+      const parts = candidates[0].content?.parts;
+      if (!parts || parts.length === 0) {
+        return {
+          type: 'section',
+          prompt,
+          sectionIndex: index,
+          generationTime,
+          success: false,
+          error: 'No parts in response'
+        };
+      }
+
+      // 画像データを探す（base64またはinlineData形式）
+      const imagePart = parts.find((part: any) => part.inlineData || part.image);
+      if (!imagePart) {
+        return {
+          type: 'section',
+          prompt,
+          sectionIndex: index,
+          generationTime,
+          success: false,
+          error: 'No image data in response'
+        };
+      }
+
+      // Base64データを取得
+      const base64Data = (imagePart as any).inlineData?.data || (imagePart as any).image?.data;
+      if (!base64Data) {
+        return {
+          type: 'section',
+          prompt,
+          sectionIndex: index,
+          generationTime,
+          success: false,
+          error: 'Could not extract base64 data from image part'
+        };
+      }
+
+      return {
+        type: 'section',
+        prompt,
+        base64Data,
+        sectionIndex: index,
+        generationTime,
+        success: true
+      };
+
+    } catch (error) {
+      const generationTime = Date.now() - startTime;
+      return {
+        type: 'section',
+        prompt: `Section image for "${section.title}"`,
+        sectionIndex: index,
+        generationTime,
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * 記事からセクションを抽出
+   *
+   * @param articleContent - 記事コンテンツ
+   * @returns セクション配列
+   */
+  private extractSections(articleContent: string): Array<{ title: string; content: string }> {
+    const sections: Array<{ title: string; content: string }> = [];
+
+    // H2見出しでセクションを分割
+    const h2Regex = /^## (.+)$/gm;
+    const matches = Array.from(articleContent.matchAll(h2Regex));
+
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const title = match[1];
+      const startIndex = match.index! + match[0].length;
+      const endIndex = i < matches.length - 1 ? matches[i + 1].index! : articleContent.length;
+
+      const content = articleContent.substring(startIndex, endIndex).trim();
+
+      sections.push({ title, content });
+    }
+
+    return sections;
+  }
+
+  /**
+   * 記事を要約
+   *
+   * @param articleContent - 記事コンテンツ
+   * @returns 要約文
+   */
+  private summarizeArticle(articleContent: string): string {
+    // 最初の段落を抽出して要約として使用
+    const firstParagraph = articleContent
+      .split('\n\n')
+      .find(para => para.trim().length > 50 && !para.startsWith('#'));
+
+    return firstParagraph?.substring(0, 300) || 'Article summary not available';
+  }
+
+  /**
+   * note.comへ記事を投稿
+   *
+   * @param articleContent - 記事コンテンツ（Markdown形式）
+   * @param title - 記事タイトル
+   * @param images - 生成された画像（オプション）
+   * @returns 投稿結果
+   */
+  async postToNote(articleContent: string, title: string, images?: GeneratedImage[]): Promise<NotePostResult> {
+    if (!this.config.notePostingEnabled) {
+      return {
+        success: false,
+        postTime: 0,
+        error: 'note.com posting is not enabled'
+      };
+    }
+
+    console.log('📝 Posting article to note.com...');
+    const startTime = Date.now();
+
+    try {
+      // 1. 画像生成（画像が提供されていない場合）
+      let generatedImages = images;
+      if (!generatedImages) {
+        console.log('');
+        generatedImages = await this.generateArticleImages(articleContent, title);
+        console.log('');
+      }
+
+      // 2. note.com投稿（Playwright使用）
+      // TODO: Playwright を使用したnote.com自動投稿
+      // TODO: クリップボード経由の投稿
+      // TODO: 既存セッションの利用
+      // TODO: 画像アップロード統合
+
+      const postTime = Date.now() - startTime;
+
+      // スタブ実装: 実際の投稿は未実装
+      console.log('⚠️ note.com posting is not fully implemented yet');
+      console.log('📌 Will be implemented in Issue #52');
+
+      return {
+        success: false,
+        postTime,
+        generatedImages,
+        error: 'Not implemented - see Issue #52'
+      };
+
+    } catch (error) {
+      const postTime = Date.now() - startTime;
+      return {
+        success: false,
+        postTime,
+        generatedImages: images,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
   }
 
   /**

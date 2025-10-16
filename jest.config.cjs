@@ -12,7 +12,7 @@ module.exports = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(@octokit|@anthropic-ai)/)',
+    'node_modules/(?!(@octokit|@anthropic-ai|@google)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
